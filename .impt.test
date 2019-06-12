@@ -1,6 +1,6 @@
 {
   "deviceGroupId": "14c5a081-16d9-7f17-52fd-0716baf028e7",
-  "timeout": 30,
+  "timeout": 180,
   "stopOnFail": false,
   "allowDisconnect": false,
   "builderCache": false,
