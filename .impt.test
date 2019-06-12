@@ -1,0 +1,12 @@
+{
+  "deviceGroupId": "14c5a081-16d9-7f17-52fd-0716baf028e7",
+  "timeout": 30,
+  "stopOnFail": false,
+  "allowDisconnect": false,
+  "builderCache": false,
+  "deviceFile": "BQ25895M.device.lib.nut",
+  "testFiles": [
+    "*.test.nut",
+    "tests/**/*.test.nut"
+  ]
+}
