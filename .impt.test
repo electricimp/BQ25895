@@ -4,7 +4,7 @@
   "stopOnFail": false,
   "allowDisconnect": false,
   "builderCache": false,
-  "deviceFile": "BQ25895M.device.lib.nut",
+  "deviceFile": "BQ25895.device.lib.nut",
   "testFiles": [
     "*.test.nut",
     "tests/**/*.test.nut"

@@ -23,6 +23,8 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const BQ25895_DEFAULT_I2C_ADDR = 0xD4;
+// From data sheet watchdog timer: default is 40s, max is 160s
+const WATCHDOG_TEST_EXP_TIME_SEC = 165;
 
 // NOTE: This test takes ~3m to run.
 // This test requires hardware. Test currently configured for an impC001 and  
@@ -33,6 +35,7 @@ class ManualWatchdogTest extends ImpTestCase {
     _i2c     = null;
     _charger = null;
     _hb      = null;
+    _wdTimeoutStartTime = null;
 
     function setUp() {
         // impC001 breakout board rev5.0 
@@ -44,9 +47,15 @@ class ManualWatchdogTest extends ImpTestCase {
 
     // Helper to let user know test is still running
     function heartbeat() {
-        info("watchdog test running...");
         cancelHearbeat();
+        logPercentWdTestDone();
         _hb = imp.wakeup(15, heartbeat.bindenv(this));
+    }
+
+    function logPercentWdTestDone() {
+        local testRunTime = time() - _wdTimeoutStartTime;
+        local percentDone = 100 * testRunTime /  WATCHDOG_TEST_EXP_TIME_SEC;
+        info("Watchdog test running. Test " + percentDone + "% done.");
     }
 
     // Helper to stop heartbeat log
@@ -72,10 +81,12 @@ class ManualWatchdogTest extends ImpTestCase {
         // Wait to ensure watchdog timer has time to expire 
         return Promise(function(resolve, reject) {
             // Create a hearbeat log, so user sees that test is still running
+            _wdTimeoutStartTime = time();
             heartbeat();
             // Check settings after watchdog would have reset (default is 40s, max is 160s)
-            imp.wakeup(165, function() {
+            imp.wakeup(WATCHDOG_TEST_EXP_TIME_SEC, function() {
                 cancelHearbeat();
+                logPercentWdTestDone();
                 local afterTimerVoltage = _charger.getChargeVoltage();
                 assertTrue(defaultVoltage != afterTimerVoltage, "User set charge voltage should not match default voltage");
                 assertEqual(userSetVoltage, afterTimerVoltage, "User set charge voltage should be the same after 160s");
