@@ -49,7 +49,7 @@ class ManualWatchdogTest extends ImpTestCase {
     function heartbeat() {
         cancelHearbeat();
         logPercentWdTestDone();
-        _hb = imp.wakeup(15, heartbeat.bindenv(this));
+        _hb = imp.wakeup(10, heartbeat.bindenv(this));
     }
 
     function logPercentWdTestDone() {
@@ -72,7 +72,7 @@ class ManualWatchdogTest extends ImpTestCase {
         // Store default charge voltage (before enable)
         local defaultVoltage = _charger.getChargeVoltage();
         // Enable with non-default settings
-        _charger.enable({"voltage" : 4.0});
+        _charger.enable({"voltage" : 3.0});
 
         // Check settings have changed after enable
         local userSetVoltage = _charger.getChargeVoltage();
@@ -89,7 +89,7 @@ class ManualWatchdogTest extends ImpTestCase {
                 logPercentWdTestDone();
                 local afterTimerVoltage = _charger.getChargeVoltage();
                 assertTrue(defaultVoltage != afterTimerVoltage, "User set charge voltage should not match default voltage");
-                assertEqual(userSetVoltage, afterTimerVoltage, "User set charge voltage should be the same after 160s");
+                assertEqual(userSetVoltage, afterTimerVoltage, "User set charge voltage should be the same after " + WATCHDOG_TEST_EXP_TIME_SEC + "s");
                 return resolve("Watchdog test passed");
             }.bindenv(this))
         }.bindenv(this))
