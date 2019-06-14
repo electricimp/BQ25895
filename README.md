@@ -2,7 +2,9 @@
 
 The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlink/bq25895.pdf) and the [BQ25895M](http://www.ti.com/lit/ds/symlink/bq25895m.pdf) switch-mode battery charge and system power path management devices for single-cell Li-Ion and Li-polymer batteries. Theses ICs support high input voltage fast charging and communicates over an I&sup2;C interface. The BQ25895 and the BQ25895M have different default settings &mdash; please see the [*enable()*](#enablesettings) method for details of the default charge settings.
 
-**Note** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./Examples/README.md) directory to determine the correct settings for your battery.
+**Note 1** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./Examples/README.md) directory to determine the correct settings for your battery.
+
+**Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates a **breaking change** which you will need to accommodate. Please see the [*enable()*](#enablesettings) method description for details.
 
 **To include this library in your project, add** `#require "BQ25895.device.lib.nut:2.0.0"` **at the top of your device code.**
 
@@ -10,13 +12,13 @@ The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlin
 
 ### Constructor: BQ25895(*i2cBus [,i2cAddress]*) ###
 
-The constructor does not configure the battery charger. It is recommended that either the *enable()* method is called and passed settings for your battery, or the [*disable()*](#disable) method is called immediately after the constructor and on cold boots.
+The constructor *does not configure the battery charger*. It is recommended that either the [*enable()*](#enablesettings) method is called and passed settings for your battery, or the [*disable()*](#disable) method is called immediately after the constructor and on cold boots.
 
 #### Parameters ####
 
 | Parameter | Type | Required? | Description |
 | --- | --- | --- | --- |
-| *i2cBus* | imp i2c bus object | Yes | The imp I&sup2;C bus that the BQ25895M is connected to. The I&sup2;C bus **must** be pre-configured &mdash; the library will not configure the bus |
+| *i2cBus* | imp i2c bus object | Yes | The imp I&sup2;C bus that the BQ25895/BQ25895M is connected to. The I&sup2;C bus **must** be pre-configured &mdash; the library will not configure the bus |
 | *i2cAddress* | Integer | No | The BQ25895's I&sup2;C address. Default: 0xD4 |
 
 #### Example ####
@@ -38,6 +40,10 @@ batteryCharger <- BQ25895(i2c);
 
 This method configures and enables the battery charger with settings to perform a charging cycle when a battery is connected and an input source is available. It is recommended that this method is called immediately after the constructor and on cold boots with the settings for your battery.
 
+For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA, which you apply by adding the key *BQ25895MDefaults* and the value `true` in a table of settings passed into the method. Please ensure you confirm that these defaults are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+
+**IMPORTANT** The default settings applied by the library have been changed from those set by this library’s predecessor, the BQ25895M library. You must consider this a breaking change when upgrading to the new library, and ensure your code calls *enable()* with the correct settings &mdash; see the examples below.
+
 #### Parameters ####
 
 | Parameter | Type | Required? | Description |
@@ -49,8 +55,8 @@ This method configures and enables the battery charger with settings to perform 
 | Key | Type | Description |
 | --- | --- | --- |
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
-| *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V. **Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *current* | Integer | The desired fast charge current limit in mA. Range: 0-5056mA. Default: 2048mA. **Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *current* | Integer | The desired fast charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
 | *setChargeCurrentOptimizer* | Boolean | Identify maximum power point without overload the input source. Default: `true` |
 | *setChargeTerminationCurrentLimit* | Integer | Charge cycle is terminated when battery voltage is above recharge threshold and the current is below *termination current*. Range: 64-1024mA. Default: 256mA |
 
@@ -58,12 +64,30 @@ This method configures and enables the battery charger with settings to perform 
 
 Nothing.
 
-#### Example ####
+#### Example 1: Using the BQ25895 with Defaults ####
 
 ```squirrel
-// Configure battery charger with default setting for BQ25895
-// A charge voltage of 4.208V and current limit of 2048mA.
+// Configure battery charger with default setting for BQ25895,
+// ie. a charge voltage of 4.208V and current limit of 2048mA.
 batteryCharger.enable();
+```
+
+#### Example 2: Using the BQ25895 with Other Settings ####
+
+```squirrel
+// Configure battery charger for BQ25895 to charge at 4.0V
+// to a maximum of 2000mA
+local settings = { "voltage" : 4.0,
+                   "current" : 2000 };
+batteryCharger.enable(settings);
+```
+
+#### Example 3: Using the BQ25895M with Defaults ####
+
+```squirrel
+// Configure battery charger with default setting for BQ25895M,
+// ie. charge voltage of 4.352V and current limit of 2048mA.
+batteryCharger.enable({"BQ25895MDefaults": true});
 ```
 
 ### disable() ###
@@ -329,7 +353,9 @@ switch(faults.ntcFault) {
 
 This method provides a software reset which clears all of the BQ25895's register settings.
 
-**Note** This will reset the charge voltage and current to the register defaults. For BQ25895 the defaults are 4.208V and 2048mA. For BQ25895M the defaults are 4.352V and 2048mA. 
+**Note** This will reset the charge voltage and current to the register defaults. For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA. Please ensure that you confirm these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+
+If the defaults are not appropriate for your battery, make sure you call [*enable()*](#enablesettings) with the correct settings **immediately** after calling *reset()*.
 
 #### Return Value ####
 
