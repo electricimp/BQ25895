@@ -25,7 +25,7 @@ As you can see, the default settings for the BQ25895M are not compatible with th
  ***********  AND LiPo 80360 BATTERY   **********/
 
 // Import the BQ25895 driver
-#require "BQ25895.device.lib.nut:2.0.0"
+#require "BQ25895.device.lib.nut:3.0.0"
 
 // Choose an impC001 I2C bus and configure it
 local i2c = hardware.i2cKL;
@@ -47,7 +47,7 @@ The example battery is, however, compatible with the default settings for the BQ
  ***********  AND LiPo 80360 BATTERY   **********/
 
 // Import the BQ25895 driver
-#require "BQ25895.device.lib.nut:2.0.0"
+#require "BQ25895.device.lib.nut:3.0.0"
 
 // Choose an impC001 I2C bus and configure it
 local i2c = hardware.i2cKL;

@@ -1,4 +1,4 @@
-# BQ25895 2.0.0 #
+# BQ25895 3.0.0 #
 
 The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlink/bq25895.pdf) and the [BQ25895M](http://www.ti.com/lit/ds/symlink/bq25895m.pdf) switch-mode battery charge and system power path management devices for single-cell Li-Ion and Li-polymer batteries. Theses ICs support high input voltage fast charging and communicates over an I&sup2;C interface. The BQ25895 and the BQ25895M have different default settings &mdash; please see the [*enable()*](#enablesettings) method for details of the default charge settings.
 
@@ -6,9 +6,13 @@ The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlin
 
 **Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates a **breaking change** which you will need to accommodate. Please see the [*enable()*](#enablesettings) method description for details.
 
-**To include this library in your project, add** `#require "BQ25895.device.lib.nut:2.0.0"` **at the top of your device code.**
+**To include this library in your project, add** `#require "BQ25895.device.lib.nut:3.0.0"` **at the top of your device code.**
 
 ## Class Usage ##
+
+### Callbacks ###
+
+An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods will take one required parameter, a callback function. These callbacks will take two required parameters, *error* and *result*. The *error* parameter will be a `null` if no error was encountered or a string containing an error message. The *result* parameter will be an integer or float - the result of the value requested.
 
 ### Constructor: BQ25895(*i2cBus [,i2cAddress]*) ###
 
@@ -24,8 +28,6 @@ The constructor *does not configure the battery charger*. It is recommended that
 #### Example ####
 
 ```squirrel
-#require "BQ25895.device.lib.nut:2.0.0"
-
 // Alias and configure an impC001 I2C bus
 local i2c = hardware.i2cKL;
 i2c.configure(CLOCK_SPEED_400_KHZ);
@@ -120,64 +122,88 @@ local voltage = batteryCharger.getChargeVoltage();
 server.log("Voltage (charge): " + voltage + "V");
 ```
 
-### getBatteryVoltage() ###
+### getBatteryVoltage(*callback*) ###
 
-This method gets the current battery voltage based on internal ADC conversion.
+This method gets the battery's voltage based on internal ADC conversion. If the request is successful the result will be a float, the battery voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
 
 #### Return Value ####
 
-Float &mdash; The battery voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getBatteryVoltage();
-server.log("Voltage (ADC): " + voltage + "V");
+batteryCharger.getBatteryVoltage(function(error, voltage) {
+    if (error != null) {
+        server.log(error);
+        return;
+    }
+
+    server.log("Voltage (ADC): " + voltage + "V");
+});
 ```
 
-### getVBUSVoltage() ###
+### getVBUSVoltage(*callback*) ###
 
-This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage.
+This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage. If the request is successful the result will be a float, the V<sub>BUS</sub> voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
 
 #### Return Value ####
 
-Float &mdash; The V<sub>BUS</sub> voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getVBUSVoltage();
-server.log("Voltage (VBAT): " + voltage + "V");
+batteryCharger.getVBUSVoltage(function(error, voltage) {
+    if (error != null) {
+        server.log(error);
+        return;
+    }
+
+    server.log("Voltage (VBUS): " + voltage + "V");
+});
 ```
 
-### getSystemVoltage() ###
+### getSystemVoltage(*callback*) ###
 
-This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply.
+This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply. If the request is successful the result will be a float, the system voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
 
 #### Return Value ####
 
-Float &mdash; The system voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getSystemVoltage();
-server.log("Voltage (system): " + voltage + "V");
+batteryCharger.getSystemVoltage(function(error, voltage) {
+    if (error != null) {
+        server.log(error);
+        return;
+    }
+
+    server.log("Voltage (system): " + voltage + "V");
+});
 ```
 
-### getChargingCurrent() ###
+### getChargingCurrent(*callback*) ###
 
-This method gets the measured current going to the battery.
+This method gets the measured current going to the battery based on the ADC conversion. If the request is successful the result will be an integer, the charging current in milliAmps, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
 
 #### Return Value ####
 
-Integer &mdash; The charging current in mA.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local current = batteryCharger.getChargingCurrent();
-server.log("Current (charging): " + current + "mA");
+batteryCharger.getChargingCurrent(function(error, current) {
+    if (error != null) {
+        server.log(error);
+        return;
+    }
+
+    server.log("Current (charging): " + current + "mA");
+});
 ```
 
 ### getInputStatus() ###
@@ -210,34 +236,37 @@ Table &mdash; An input status report with the following keys:
 
 ```squirrel
 local inputStatus = batteryCharger.getInputStatus();
+local msg = "";
+
 switch(inputStatus.vbusStatus) {
     case BQ25895_VBUS_STATUS.NO_INPUT:
-        server.log("No Input");
+        msg = "No Input";
         break;
     case BQ25895_VBUS_STATUS.USB_HOST_SDP:
-        server.log("USB Host SDP");
+        msg = "USB Host SDP";
         break;
     case BQ25895_VBUS_STATUS.USB_CDP:
-        server.log("USB CDP");
+        msg = "USB CDP";
         break;
     case BQ25895_VBUS_STATUS.USB_DCP:
-        server.log("USB DCP");
+        msg = "USB DCP";
         break;
     case BQ25895_VBUS_STATUS.ADJUSTABLE_HV_DCP:
-        server.log("Adjustable High Voltage DCP");
+        msg = "Adjustable High Voltage DCP";
         break;
     case BQ25895_VBUS_STATUS.UNKNOWN_ADAPTER:
-        server.log("Unknown Adapter");
+        msg = "Unknown Adapter";
         break;
     case BQ25895_VBUS_STATUS.NON_STANDARD_ADAPTER:
-        server.log("Non Standard Adapter");
+        msg = "Non Standard Adapter";
         break;
     case BQ25895_VBUS_STATUS.OTG:
-        server.log("OTG");
+        msg = "OTG";
         break;
 }
 
-server.log("Input Current Limit = " + inputStatus.inputCurrentLimit);
+server.log("VUS status: " + msg);
+server.log("Input Current Limit: " + inputStatus.inputCurrentLimit);
 ```
 
 ### getChargingStatus() ###
@@ -316,9 +345,12 @@ Table &mdash; A charger fault report with the following keys:
 
 ```squirrel
 local faults = batteryCharger.getChargerFaults();
+
 server.log("Fault Report");
+server.log("--------------------------------------");
 if (faults.watchdogFault) server.log("Watchdog Timer Fault reported");
 if (faults.boostFault) server.log("Boost Fault reported");
+if (faults.battFault) server.log("VBAT too high");
 
 switch(faults.chrgFault) {
     case BQ25895_CHARGING_FAULT.NORMAL:
@@ -335,8 +367,6 @@ switch(faults.chrgFault) {
         break;
 }
 
-if (faults.battFault) server.log("VBAT too high");
-
 switch(faults.ntcFault) {
     case BQ25895_NTC_FAULT.NORMAL:
         server.log("NTC OK");
@@ -347,6 +377,9 @@ switch(faults.ntcFault) {
     case BQ25895_NTC_FAULT.TS_HOT:
         server.log("NTC NOT OK - TS Hot");
         break;
+}
+
+server.log("--------------------------------------");
 ```
 
 ### reset() ###
