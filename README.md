@@ -287,7 +287,7 @@ Integer &mdash; A charging status constant:
 #### Example ####
 
 ```squirrel
-local status = charger.getChargingStatus();
+local status = batteryCharger.getChargingStatus();
 switch(status) {
     case BQ25895_CHARGING_STATUS.NOT_CHARGING:
         server.log("Battery is not charging");
