@@ -342,15 +342,19 @@ class BQ25895 {
                 return;
             }
 
-            // Get register value
-            local rd = _getReg(reg);
-            // Calculate value using Register mask, Offset, Resolution
-            local result = ((rd & mask) * resolution) + offset;
-            // Convert mV to Volts if needed
-            if (convert) result /= 1000.0;
+            try {
+                // Get register value
+                local rd = _getReg(reg);
+                // Calculate value using Register mask, Offset, Resolution
+                local result = ((rd & mask) * resolution) + offset;
+                // Convert mV to Volts if needed
+                if (convert) result /= 1000.0;
 
-            // Pass results to callback
-            cb(null, result);
+                // Pass results to callback
+                cb(null, result);
+            } catch(e) {
+                cb(e, null);
+            }  
         }.bindenv(this);
     }
 
@@ -437,13 +441,13 @@ class BQ25895 {
 
     function _getReg(reg) {
         local result = _i2c.read(_addr, reg.tochar(), 1);
-        if (result == null) throw "[ERROR]: I2C read error: " + _i2c.readerror();
+        if (result == null) throw "[ERROR]: I2C read error " + _i2c.readerror();
         return result[0];
     }
 
     function _setReg(reg, val) {
         local result = _i2c.write(_addr, format("%c%c", reg, (val & 0xff)));
-        if (result) throw "[ERROR]: I2C write error: " + result;
+        if (result) throw "[ERROR]: I2C write error " + result;
         return result;
     }
 
