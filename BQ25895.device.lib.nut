@@ -217,23 +217,9 @@ class BQ25895 {
     // Passes the battery voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
     function getBatteryVoltage(cb) {
-        // Add get battery voltage callback to _convCallbacks
-        _convCallbacks.push(
-            function(err) {
-                if (err) {
-                    cb(err, null);
-                    return;
-                }
-
-                // Get register value
-                local rd = _getReg(BQ25895_REG0E);
-                // Calculate voltage (mV) Offset: 2304mV, Resolution: 20mV
-                local battV = ((rd & 0x7F) * 20) + 2304;
-            
-                // Convert mV to Volts, and pass results to callback
-                cb(null, battV / 1000.0);
-            }.bindenv(this)
-        );
+        // Create and add a get battery voltage callback to _convCallbacks
+        // Register: BQ25895_REG0E, Register Bit Mask: 0x7F, Offset: 2304mV, Convert mV to V, Resolution: 20mV
+        _convCallbacks.push(_convCBFactory(BQ25895_REG0E, 0x7F, 2304, 20, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -242,23 +228,9 @@ class BQ25895 {
     // Passes the VBUS (input) voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
     function getVBUSVoltage(cb) {
-        // Add get VBUS voltage callback to _convCallbacks
-        _convCallbacks.push(
-            function(err) {
-                if (err) {
-                    cb(err, null);
-                    return;
-                }
-
-                // Get register value
-                local rd = _getReg(BQ25895_REG11);
-                // Calculate voltage (mV) Offset: 2600mV, Resolution: 100mV
-                local vBusV = ((rd & 0x7F) * 100) + 2600;
-
-                // Convert mV to Volts, and pass results to callback
-                cb(null, vBusV / 1000.0);
-            }.bindenv(this)
-        );
+        // Create and add a get VBUS voltage callback to _convCallbacks
+        // Register: BQ25895_REG11, Register Bit Mask: 0x7F, Offset: 2600mV, Convert mV to V, Resolution: 100mV
+        _convCallbacks.push(_convCBFactory(BQ25895_REG11, 0x7F, 2600, 100, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -267,23 +239,9 @@ class BQ25895 {
     // Passes the system voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
     function getSystemVoltage(cb) {
-        // Add get system voltage callback to _convCallbacks
-        _convCallbacks.push(
-            function(err) {
-                if (err) {
-                    cb(err, null);
-                    return;
-                }
-
-                // Get register value
-                local rd = _getReg(BQ25895_REG0F);
-                // Calculate voltage (mV) Offset: 2304mV, Resolution: 20mV
-                local sysV = ((rd & 0x7F) * 20) + 2304;
-
-                // Convert mV to Volts, and pass results to callback
-                cb(null, sysV / 1000.0);
-            }.bindenv(this)
-        );
+        // Create and add a get system voltage callback to _convCallbacks
+        // Register: BQ25895_REG0F, Register Bit Mask: 0x7F, Offset: 2304mV, Convert mV to V, Resolution: 20mV
+        _convCallbacks.push(_convCBFactory(BQ25895_REG0F, 0x7F, 2304, 20, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -292,23 +250,9 @@ class BQ25895 {
     // Passes the measured charge current based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
     function getChargingCurrent(cb ) {
-        // Add get system voltage callback to _convCallbacks
-        _convCallbacks.push(
-            function(err) {
-                if (err) {
-                    cb(err, null);
-                    return;
-                }
-
-                // Get register value
-                local rd = _getReg(BQ25895_REG12);
-                // Calculate chargeing current (mA) Resolution: 50mV
-                local iChgr = (rd & 0x7F) * 50;
-
-                // Pass results (mV) to callback
-                cb(null, iChgr);
-            }.bindenv(this)
-        );
+        // Create and add a get charging current callback to _convCallbacks
+        // Register: BQ25895_REG12, Register Bit Mask: 0x7F, Offset: 0, Convert mA to A, Resolution: 50mV
+        _convCallbacks.push(_convCBFactory(BQ25895_REG12, 0x7F, 0, 50, false, cb));
 
         // Start ADC conversion
         _convStart();
@@ -337,8 +281,13 @@ class BQ25895 {
 
         // NOTE: ADC conversion time nominal 8ms, max 1s, imp.wakeup min is ~0.01
         // Set CONV_START bit
-        _setRegBit(BQ25895_REG02, 7, 1);
-
+        try {
+            _setRegBit(BQ25895_REG02, 7, 1);
+        } catch(e) {
+            _triggerConvDoneFlow(e);
+            return;
+        }
+        
         // Poll register to see when ADC conversion completes
         _convTimer = imp.wakeup(0.01, _checkConvStart.bindenv(this));
 
@@ -347,43 +296,68 @@ class BQ25895 {
     }
 
     function _checkConvStart() {
-        // Check BQ25895_REG02 CONV_START bit
-        local rd = _getReg(BQ25895_REG02);
+        try {
+            // Check BQ25895_REG02 CONV_START bit
+            local rd = _getReg(BQ25895_REG02);
 
-        if (rd & 0x80) {
-            // ADC conversion is not complete yet
-            // Make sure only one polling timer exists
-            _cancelConvTimer();
-            // Schedule next ADC conversion check
-            _convTimer = imp.wakeup(0.01, _checkConvStart.bindenv(this));
-        } else {
-            // ADC conversion is complete 
-            // Trigger callbacks with no error
-            foreach (cb in _convCallbacks) {
-                cb(null);
+            if (rd & 0x80) {
+                // ADC conversion is not complete yet
+                // Make sure only one polling timer exists
+                _cancelConvTimer();
+                // Schedule next ADC conversion check
+                _convTimer = imp.wakeup(0.01, _checkConvStart.bindenv(this));
+            } else {
+                // ADC conversion is complete 
+                // Trigger callbacks with no error
+                _triggerConvDoneFlow(null);
+            }
+        } catch(e) {
+            // Trigger callbacks with error
+            _triggerConvDoneFlow(e);
+            return;
+        }
+    }
+
+    function _triggerConvDoneFlow(err) {
+        // Cancel polling timer
+        _cancelConvTimer();
+        // Cancel timeout timer
+        _cancelConvTimeout();
+
+        // Trigger callbacks 
+        foreach (cb in _convCallbacks) {
+            cb(err);
+        }
+
+        // Reset conversion flag and callbacks
+        _convStarted = false;
+        _convCallbacks = [];
+    }
+
+    function _convCBFactory(reg, mask, offset, resolution, convert, cb) {
+        return function(err) {
+            if (err) {
+                // Pass error to callback
+                cb(err, null);
+                return;
             }
 
-            // Reset conversion flag and callbacks
-            _convStarted = false;
-            _convCallbacks = [];
-        }
+            // Get register value
+            local rd = _getReg(reg);
+            // Calculate value using Register mask, Offset, Resolution
+            local result = ((rd & mask) * resolution) + offset;
+            // Convert mV to Volts if needed
+            if (convert) result /= 1000.0;
+
+            // Pass results to callback
+            cb(null, result);
+        }.bindenv(this);
     }
 
     function _startConvTimeout() {
         _convTimeout = imp.wakeup(1, function() {
-            // Cancel polling timer
-            _cancelConvTimer();
-            // Cancel timeout timer
-            _cancelConvTimeout();
-
             // Trigger callbacks with error 
-            foreach (cb in _convCallbacks) {
-                cb("[ERROR]: BQ25895 ADC conversion timed out");
-            }
-
-            // Reset conversion flag and callbacks
-            _convStarted = false;
-            _convCallbacks = [];
+            _triggerConvDoneFlow("[ERROR]: BQ25895 ADC conversion timed out");
         }.bindenv(this));
     }
 
@@ -463,13 +437,13 @@ class BQ25895 {
 
     function _getReg(reg) {
         local result = _i2c.read(_addr, reg.tochar(), 1);
-        if (result == null) throw "I2C read error: " + _i2c.readerror();
+        if (result == null) throw "[ERROR]: I2C read error: " + _i2c.readerror();
         return result[0];
     }
 
     function _setReg(reg, val) {
         local result = _i2c.write(_addr, format("%c%c", reg, (val & 0xff)));
-        if (result) throw "I2C write error: " + result;
+        if (result) throw "[ERROR]: I2C write error: " + result;
         return result;
     }
 

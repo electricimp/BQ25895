@@ -463,6 +463,36 @@ class StubbedHardwareTests extends ImpTestCase {
         return "Get charge voltage test passed";
     }
 
+    function testAsyncGetI2CError() {
+        // Test that callback contains i2c error 
+        _cleari2cBuffers();
+        // Set readbuffer values
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
+        // // REG0E to 0x00
+        // _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
+
+        return Promise(function(resolve, reject) {
+            _charger.getBatteryVoltage(function(err, actual) {
+
+                assertTrue(err != null, "Async getter did not return expected error");
+                local idx = err.find("[ERROR]: I2C read error");
+                assertTrue(idx != null, "Expected error not found");
+                
+                // Make sure all conversion varaibles have cleared
+                imp.wakeup(0, function() {
+                    assertEqual(0, _charger._convCallbacks.len(), "Conversion callbacks not cleared");
+                    assertTrue(!_charger._convStarted, "Conversion flag not cleared");
+                    assertEqual(null, _charger._convTimer, "Conversion timer not cleared");
+                    assertEqual(null, _charger._convTimeout, "Conversion timeout timer not cleared");
+                    
+                    _cleari2cBuffers();
+                    return resolve("Async getter with i2c error test passed");
+                }.bindenv(this))
+            }.bindenv(this));
+        }.bindenv(this));
+    }
+
     function testGetBatteryVoltage() {
         // Test that REG0E  set to known val, getBatteryVoltage returns expected value
         _cleari2cBuffers();
