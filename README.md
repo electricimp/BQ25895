@@ -60,9 +60,9 @@ For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defau
 | --- | --- | --- |
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
 | *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *current* | Integer | The desired fast charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *setChargeCurrentOptimizer* | Boolean | Identify maximum power point without overload the input source. Default: `true` |
-| *setChargeTerminationCurrentLimit* | Integer | Charge cycle is terminated when battery voltage is above recharge threshold and the current is below *termination current*. Range: 64-1024mA. Default: 256mA |
+| *current* | Integer | The desired fast-charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *setChargeCurrentOptimizer* | Boolean | Make the BQ25895 identify the maximum power point achievable without overloading the input source. Default: `true` |
+| *setChargeTerminationCurrentLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
 
 #### Return Value ####
 
