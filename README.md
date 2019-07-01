@@ -12,7 +12,7 @@ The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlin
 
 ### Callbacks ###
 
-An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods will take one required parameter, a callback function. These callbacks will take two required parameters, *error* and *result*. The *error* parameter will be a `null` if no error was encountered or a string containing an error message. The *result* parameter will be an integer or float - the result of the value requested.
+An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods take a callback function as a mandatory argument. These callback functions have two parameters of their own: *error* and *result*. The *error* parameter will receive `null` as an argument if no error was encountered, or a string containing an error message. The *result* parameter’s argument will be will the result of the value requested and be either an integer or float, depending on the method in question.
 
 ### Constructor: BQ25895(*i2cBus [,i2cAddress]*) ###
 
@@ -28,6 +28,8 @@ The constructor *does not configure the battery charger*. It is recommended that
 #### Example ####
 
 ```squirrel
+#require "BQ25895.device.lib.nut:3.0.0"
+
 // Alias and configure an impC001 I2C bus
 local i2c = hardware.i2cKL;
 i2c.configure(CLOCK_SPEED_400_KHZ);
@@ -58,9 +60,9 @@ For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defau
 | --- | --- | --- |
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
 | *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *current* | Integer | The desired fast charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *setChargeCurrentOptimizer* | Boolean | Identify maximum power point without overload the input source. Default: `true` |
-| *setChargeTerminationCurrentLimit* | Integer | Charge cycle is terminated when battery voltage is above recharge threshold and the current is below *termination current*. Range: 64-1024mA. Default: 256mA |
+| *current* | Integer | The desired fast-charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *setChargeCurrentOptimizer* | Boolean | Make the BQ25895 identify the maximum power point achievable without overloading the input source. Default: `true` |
+| *setChargeTerminationCurrentLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
 
 #### Return Value ####
 
@@ -124,7 +126,13 @@ server.log("Voltage (charge): " + voltage + "V");
 
 ### getBatteryVoltage(*callback*) ###
 
-This method gets the battery's voltage based on internal ADC conversion. If the request is successful the result will be a float, the battery voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
+This method retrieves the battery's voltage based on internal ADC conversion. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
@@ -135,7 +143,7 @@ Nothing.
 ```squirrel
 batteryCharger.getBatteryVoltage(function(error, voltage) {
     if (error != null) {
-        server.log(error);
+        server.error(error);
         return;
     }
 
@@ -145,7 +153,13 @@ batteryCharger.getBatteryVoltage(function(error, voltage) {
 
 ### getVBUSVoltage(*callback*) ###
 
-This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage. If the request is successful the result will be a float, the V<sub>BUS</sub> voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
+This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage. If the request is successful, the result will be a float: the V<sub>BUS</sub> voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
@@ -166,7 +180,13 @@ batteryCharger.getVBUSVoltage(function(error, voltage) {
 
 ### getSystemVoltage(*callback*) ###
 
-This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply. If the request is successful the result will be a float, the system voltage in Volts, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
+This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply. If the request is successful, the result will be a float: the system voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
@@ -177,7 +197,7 @@ Nothing.
 ```squirrel
 batteryCharger.getSystemVoltage(function(error, voltage) {
     if (error != null) {
-        server.log(error);
+        server.error(error);
         return;
     }
 
@@ -187,7 +207,13 @@ batteryCharger.getSystemVoltage(function(error, voltage) {
 
 ### getChargingCurrent(*callback*) ###
 
-This method gets the measured current going to the battery based on the ADC conversion. If the request is successful the result will be an integer, the charging current in milliAmps, and will be passed to the *callback* parameter. See [Class Usage Callbacks](#callbacks) for details. 
+This method gets the measured current going to the battery based on the ADC conversion. If the request is successful, the result will be an integer: the charging current in milliAmperes, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
@@ -198,7 +224,7 @@ Nothing.
 ```squirrel
 batteryCharger.getChargingCurrent(function(error, current) {
     if (error != null) {
-        server.log(error);
+        server.error(error);
         return;
     }
 
@@ -258,7 +284,7 @@ switch(inputStatus.vbusStatus) {
         msg = "Unknown Adapter";
         break;
     case BQ25895_VBUS_STATUS.NON_STANDARD_ADAPTER:
-        msg = "Non Standard Adapter";
+        msg = "Non-standard Adapter";
         break;
     case BQ25895_VBUS_STATUS.OTG:
         msg = "OTG";
