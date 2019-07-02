@@ -126,7 +126,7 @@ server.log("Charge Termination Voltage: " + voltage + "V");
 
 ### getBatteryVoltage(*callback*) ###
 
-This method retrieves the battery's voltage limit during charging. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
+This method retrieves the battery's voltage based on an internal ADC conversion. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
 #### Parameters ####
 
@@ -147,7 +147,7 @@ batteryCharger.getBatteryVoltage(function(error, voltage) {
         return;
     }
 
-    server.log("Charge Termination Voltage: " + voltage + "V");
+    server.log("Battery Voltage (ADC): " + voltage + "V");
 });
 ```
 
