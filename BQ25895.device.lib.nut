@@ -101,36 +101,36 @@ class BQ25895 {
     static VERSION = "3.0.0";
 
     // I2C information
-    _i2c           = null;
-    _addr          = null;
+    _i2c         = null;
+    _addr        = null;
 
     // ADC conversion vars
-    _convCallbacks = null;
-    _convStarted   = null;
-    _convTimer     = null;
-    _convTimeout   = null;
+    _convCbs     = null;
+    _convStarted = null;
+    _convTmr     = null;
+    _convTimeout = null;
 
     constructor(i2c, addr = 0xD4) {
         _i2c = i2c;
         _addr = addr;
         _convStarted = false;
-        _convCallbacks = [];
+        _convCbs = [];
     }
 
     // Initialize battery charger
     function enable(settings = {}) {
         // Set to default BQ25895M settings
-        local voltage = BQ25895_DEFAULT_SETTINGS.CRG_VOLTAGE;
-        local current = BQ25895_M_SHARED_DEFAULTS.CRG_CURR;
+        local volt = BQ25895_DEFAULT_SETTINGS.CRG_VOLTAGE;
+        local curr = BQ25895_M_SHARED_DEFAULTS.CRG_CURR;
 
         if ("BQ25895MDefaults" in settings && settings.BQ25895MDefaults) {
-            voltage = BQ25895M_DEFAULT_SETTINGS.CRG_VOLTAGE;
-            current = BQ25895_M_SHARED_DEFAULTS.CRG_CURR;
+            volt = BQ25895M_DEFAULT_SETTINGS.CRG_VOLTAGE;
+            curr = BQ25895_M_SHARED_DEFAULTS.CRG_CURR;
             // Set High Voltage DCP and Max Charge Adapter settings
             _setReg(BQ25895_REG02, BQ25895M_DEFAULT_SETTINGS.REG02_DEFAULTS);
         } else {
-            if ("voltage" in settings) voltage = settings.voltage;
-            if ("current" in settings) current = settings.current;
+            if ("voltage" in settings) volt = settings.voltage;
+            if ("current" in settings) curr = settings.current;
             _setReg(BQ25895_REG02, BQ25895_DEFAULT_SETTINGS.REG02_DEFAULTS);
         }
 
@@ -141,22 +141,22 @@ class BQ25895 {
         _setReg(BQ25895_REG03, BQ25895_M_SHARED_DEFAULTS.REG03_DEFAULT);
 
         // Update settings
-        _setChargeVoltage(voltage);
-        _setChargeCurrent(current);
+        _setChrgV(volt);
+        _setChrgCurr(curr);
 
-        if (("setChargeCurrentOptimizer" in settings) && settings.setChargeCurrentOptimizer) {
-            // Enable charge current optimizer
+        if (("forceICO" in settings) && settings.forceICO) {
+            // Enable force start input charge current optimizer
             _setRegBit(BQ25895_REG09, 7, 1); 
         } else {
-            // Disable charge current optimizer
+            // Disable force start input charge current optimizer
             _setRegBit(BQ25895_REG09, 7, 0); 
         }
     
-        if ("setChargeTerminationCurrentLimit" in settings) {
-            _setChargeTerminationCurrent(settings.setChargeTerminationCurrentLimit);        
+        if ("chrgTermLimit" in settings) {
+            _setChrgTermCurr(settings.chrgTermLimit);        
         } else {
             // Set default charge termination current limit of 256mA
-            _setChargeTerminationCurrent(BQ25895_M_SHARED_DEFAULTS.CHARGE_TERM_CURR); 
+            _setChrgTermCurr(BQ25895_M_SHARED_DEFAULTS.CHARGE_TERM_CURR); 
         }
     }
 
@@ -170,7 +170,7 @@ class BQ25895 {
     }
 
     // Returns the target battery voltage
-    function getChargeVoltage() {
+    function getChrgTermV() {
         local rd = _getReg(BQ25895_REG06);
 
         // 16mV is the resolution, 3840mV must be added as the offset
@@ -196,13 +196,13 @@ class BQ25895 {
     }
 
     // Returns the charging status: Not Charging, Pre-charge, Fast Charging, Charge Termination Good
-    function getChargingStatus() {
+    function getChrgStatus() {
         local rd = _getReg(BQ25895_REG0B);
         return rd & 0x18;
     }
 
     // Returns the possible charger faults in an array: watchdogFault, boostFault, chrgFault, battFault, ntcFault
-    function getChargerFaults() {
+    function getChrgFaults() {
         // Read faults register
         local rd = _getReg(BQ25895_REG0C);
         return {
@@ -216,10 +216,10 @@ class BQ25895 {
 
     // Passes the battery voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
-    function getBatteryVoltage(cb) {
-        // Create and add a get battery voltage callback to _convCallbacks
+    function getBattV(cb) {
+        // Create and add a get battery voltage callback to _convCbs
         // Register: BQ25895_REG0E, Register Bit Mask: 0x7F, Offset: 2304mV, Convert mV to V, Resolution: 20mV
-        _convCallbacks.push(_convCBFactory(BQ25895_REG0E, 0x7F, 2304, 20, true, cb));
+        _convCbs.push(_convCbFactory(BQ25895_REG0E, 0x7F, 2304, 20, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -227,10 +227,10 @@ class BQ25895 {
 
     // Passes the VBUS (input) voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
-    function getVBUSVoltage(cb) {
-        // Create and add a get VBUS voltage callback to _convCallbacks
+    function getVBUSV(cb) {
+        // Create and add a get VBUS voltage callback to _convCbs
         // Register: BQ25895_REG11, Register Bit Mask: 0x7F, Offset: 2600mV, Convert mV to V, Resolution: 100mV
-        _convCallbacks.push(_convCBFactory(BQ25895_REG11, 0x7F, 2600, 100, true, cb));
+        _convCbs.push(_convCbFactory(BQ25895_REG11, 0x7F, 2600, 100, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -238,10 +238,10 @@ class BQ25895 {
 
     // Passes the system voltage based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
-    function getSystemVoltage(cb) {
-        // Create and add a get system voltage callback to _convCallbacks
+    function getSysV(cb) {
+        // Create and add a get system voltage callback to _convCbs
         // Register: BQ25895_REG0F, Register Bit Mask: 0x7F, Offset: 2304mV, Convert mV to V, Resolution: 20mV
-        _convCallbacks.push(_convCBFactory(BQ25895_REG0F, 0x7F, 2304, 20, true, cb));
+        _convCbs.push(_convCbFactory(BQ25895_REG0F, 0x7F, 2304, 20, true, cb));
 
         // Start ADC conversion
         _convStart();
@@ -249,10 +249,10 @@ class BQ25895 {
     
     // Passes the measured charge current based on the ADC conversion to the callback, may take up to 
     // 1s to get a value
-    function getChargingCurrent(cb ) {
-        // Create and add a get charging current callback to _convCallbacks
+    function getChrgCurr(cb ) {
+        // Create and add a get charging current callback to _convCbs
         // Register: BQ25895_REG12, Register Bit Mask: 0x7F, Offset: 0, Convert mA to A, Resolution: 50mV
-        _convCallbacks.push(_convCBFactory(BQ25895_REG12, 0x7F, 0, 50, false, cb));
+        _convCbs.push(_convCbFactory(BQ25895_REG12, 0x7F, 0, 50, false, cb));
 
         // Start ADC conversion
         _convStart();
@@ -276,7 +276,7 @@ class BQ25895 {
         // Toggle conversion flag so only one conversion is triggered at a time
         _convStarted = true;
         // Make sure only one set of polling timer exists
-        _cancelConvTimer();
+        _cancelConvTmr();
         _cancelConvTimeout();
 
         // NOTE: ADC conversion time nominal 8ms, max 1s, imp.wakeup min is ~0.01
@@ -289,7 +289,7 @@ class BQ25895 {
         }
         
         // Poll register to see when ADC conversion completes
-        _convTimer = imp.wakeup(0.01, _checkConvStart.bindenv(this));
+        _convTmr = imp.wakeup(0.01, _checkConvStart.bindenv(this));
 
         // Don't poll forever, set a timeout 
         _startConvTimeout();
@@ -303,9 +303,9 @@ class BQ25895 {
             if (rd & 0x80) {
                 // ADC conversion is not complete yet
                 // Make sure only one polling timer exists
-                _cancelConvTimer();
+                _cancelConvTmr();
                 // Schedule next ADC conversion check
-                _convTimer = imp.wakeup(0.01, _checkConvStart.bindenv(this));
+                _convTmr = imp.wakeup(0.01, _checkConvStart.bindenv(this));
             } else {
                 // ADC conversion is complete 
                 // Trigger callbacks with no error
@@ -320,21 +320,21 @@ class BQ25895 {
 
     function _triggerConvDoneFlow(err) {
         // Cancel polling timer
-        _cancelConvTimer();
+        _cancelConvTmr();
         // Cancel timeout timer
         _cancelConvTimeout();
 
         // Trigger callbacks 
-        foreach (cb in _convCallbacks) {
+        foreach (cb in _convCbs) {
             cb(err);
         }
 
         // Reset conversion flag and callbacks
         _convStarted = false;
-        _convCallbacks = [];
+        _convCbs = [];
     }
 
-    function _convCBFactory(reg, mask, offset, resolution, convert, cb) {
+    function _convCbFactory(reg, mask, offset, resolution, convert, cb) {
         return function(err) {
             if (err) {
                 // Pass error to callback
@@ -365,10 +365,10 @@ class BQ25895 {
         }.bindenv(this));
     }
 
-    function _cancelConvTimer() {
-        if (_convTimer != null) {
-            imp.cancelwakeup(_convTimer);
-            _convTimer = null;
+    function _cancelConvTmr() {
+        if (_convTmr != null) {
+            imp.cancelwakeup(_convTmr);
+            _convTmr = null;
         }
     }
 
@@ -380,7 +380,7 @@ class BQ25895 {
     }
 
     // Set target battery voltage
-    function _setChargeVoltage(vreg) {
+    function _setChrgV(vreg) {
         // Convert to V to mV, ensure value is within range 3504mV and 4400mV
         // and calculate value with offset: 3.840V and resolution: 16mV 
         vreg = (_limit(vreg * 1000, 3840, 4608) - 3840) / 16;
@@ -396,7 +396,7 @@ class BQ25895 {
     }
 
     // Set fast charge current
-    function _setChargeCurrent(ichg) {
+    function _setChrgCurr(ichg) {
         // Ensure value is within range 0mA and 5056mA and calculate
         // value with resolution: 64mA         
         ichg = _limit(ichg, 0, 5056) / 64;
@@ -411,7 +411,7 @@ class BQ25895 {
         _setReg(BQ25895_REG04, rd);
     }
     
-    function _setChargeTerminationCurrent(iterm) {
+    function _setChrgTermCurr(iterm) {
         // Ensure value is within range 64mA and 1024mA and calculate
         // value with offset: 64mA and resolution: 64mA         
         iterm = (_limit(iterm, 64, 1024) - 64) / 64;

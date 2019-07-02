@@ -61,8 +61,8 @@ For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defau
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
 | *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
 | *current* | Integer | The desired fast-charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *setChargeCurrentOptimizer* | Boolean | Make the BQ25895 identify the maximum power point achievable without overloading the input source. Default: `true` |
-| *setChargeTerminationCurrentLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
+| *forceICO* | Boolean | Whether to force start the input current optimizer. Default: `false` |
+| *chrgTermLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
 
 #### Return Value ####
 
@@ -109,7 +109,7 @@ Nothing.
 batteryCharger.disable();
 ```
 
-### getChargeVoltage() ###
+### getChrgTermV() ###
 
 This method gets the charge termination voltage for the battery.
 
@@ -120,11 +120,11 @@ Float &mdash; The charge voltage limit in Volts.
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getChargeVoltage();
+local voltage = batteryCharger.getChrgTermV();
 server.log("Charge Termination Voltage: " + voltage + "V");
 ```
 
-### getBatteryVoltage(*callback*) ###
+### getBattV(*callback*) ###
 
 This method retrieves the battery's voltage based on an internal ADC conversion. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
@@ -141,7 +141,7 @@ Nothing.
 #### Example ####
 
 ```squirrel
-batteryCharger.getBatteryVoltage(function(error, voltage) {
+batteryCharger.getBattV(function(error, voltage) {
     if (error != null) {
         server.error(error);
         return;
@@ -151,7 +151,7 @@ batteryCharger.getBatteryVoltage(function(error, voltage) {
 });
 ```
 
-### getVBUSVoltage(*callback*) ###
+### getVBUSV(*callback*) ###
 
 This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage to the BQ25895. If the request is successful, the result will be a float: the V<sub>BUS</sub> voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
@@ -168,7 +168,7 @@ Nothing.
 #### Example ####
 
 ```squirrel
-batteryCharger.getVBUSVoltage(function(error, voltage) {
+batteryCharger.getVBUSV(function(error, voltage) {
     if (error != null) {
         server.log(error);
         return;
@@ -178,7 +178,7 @@ batteryCharger.getVBUSVoltage(function(error, voltage) {
 });
 ```
 
-### getSystemVoltage(*callback*) ###
+### getSysV(*callback*) ###
 
 This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply. If the request is successful, the result will be a float: the system voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
@@ -195,7 +195,7 @@ Nothing.
 #### Example ####
 
 ```squirrel
-batteryCharger.getSystemVoltage(function(error, voltage) {
+batteryCharger.getSysV(function(error, voltage) {
     if (error != null) {
         server.error(error);
         return;
@@ -205,7 +205,7 @@ batteryCharger.getSystemVoltage(function(error, voltage) {
 });
 ```
 
-### getChargingCurrent(*callback*) ###
+### getChrgCurr(*callback*) ###
 
 This method gets the measured current going to the battery based on the ADC conversion. If the request is successful, the result will be an integer: the charging current in milliAmperes, returned via the function passed into the method's *callback* parameter.
 
@@ -222,7 +222,7 @@ Nothing.
 #### Example ####
 
 ```squirrel
-batteryCharger.getChargingCurrent(function(error, current) {
+batteryCharger.getChrgCurr(function(error, current) {
     if (error != null) {
         server.error(error);
         return;
@@ -295,7 +295,7 @@ server.log("VBUS status: " + msg);
 server.log("Input Current Limit: " + inputStatus.inputCurrentLimit);
 ```
 
-### getChargingStatus() ###
+### getChrgStatus() ###
 
 This method reports the battery charging status.
 
@@ -313,7 +313,7 @@ Integer &mdash; A charging status constant:
 #### Example ####
 
 ```squirrel
-local status = batteryCharger.getChargingStatus();
+local status = batteryCharger.getChrgStatus();
 switch(status) {
     case BQ25895_CHARGING_STATUS.NOT_CHARGING:
         server.log("Battery is not charging");
@@ -334,7 +334,7 @@ switch(status) {
 }
 ```
 
-### getChargerFaults() ###
+### getChrgFaults() ###
 
 This method reports possible charger faults.
 
@@ -370,7 +370,7 @@ Table &mdash; A charger fault report with the following keys:
 #### Example ####
 
 ```squirrel
-local faults = batteryCharger.getChargerFaults();
+local faults = batteryCharger.getChrgFaults();
 
 server.log("Fault Report");
 server.log("--------------------------------------");

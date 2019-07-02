@@ -296,7 +296,7 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Test setChargeCurrentOptimizer
         _charger.enable({
-            "setChargeCurrentOptimizer" : true
+            "forceICO" : true
         });
 
         // Write commands in enable:
@@ -341,8 +341,8 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Test setChargeCurrentOptimizer in range
         _charger.enable({
-            "setChargeCurrentOptimizer" : false, 
-            "setChargeTerminationCurrentLimit" : 500
+            "forceICO" : false, 
+            "chrgTermLimit" : 500
         });
 
         // Write commands in enable:
@@ -368,7 +368,7 @@ class StubbedHardwareTests extends ImpTestCase {
         // Test setChargeCurrentOptimizer too low
         _i2c._clearWriteBuffer();
         _charger.enable({
-            "setChargeTerminationCurrentLimit" : 10
+            "chrgTermLimit" : 10
         });
 
         // Write commands in enable:
@@ -393,7 +393,7 @@ class StubbedHardwareTests extends ImpTestCase {
         // Test setChargeCurrentOptimizer too high
         _i2c._clearWriteBuffer();
         _charger.enable({
-            "setChargeTerminationCurrentLimit" : 2000
+            "chrgTermLimit" : 2000
         });
 
         // Write commands in enable:
@@ -456,7 +456,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG06.tochar(), "\x82");
 
         local expected = 4.352;
-        local actual = _charger.getChargeVoltage();
+        local actual = _charger.getChrgTermV();
         assertEqual(expected, actual, "Get charge voltage did not match expected results");
         
         _cleari2cBuffers();
@@ -473,7 +473,7 @@ class StubbedHardwareTests extends ImpTestCase {
         // _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
 
         return Promise(function(resolve, reject) {
-            _charger.getBatteryVoltage(function(err, actual) {
+            _charger.getBattV(function(err, actual) {
 
                 assertTrue(err != null, "Async getter did not return expected error");
                 local idx = err.find("[ERROR]: I2C read error");
@@ -481,9 +481,9 @@ class StubbedHardwareTests extends ImpTestCase {
                 
                 // Make sure all conversion varaibles have cleared
                 imp.wakeup(0, function() {
-                    assertEqual(0, _charger._convCallbacks.len(), "Conversion callbacks not cleared");
+                    assertEqual(0, _charger._convCbs.len(), "Conversion callbacks not cleared");
                     assertTrue(!_charger._convStarted, "Conversion flag not cleared");
-                    assertEqual(null, _charger._convTimer, "Conversion timer not cleared");
+                    assertEqual(null, _charger._convTmr, "Conversion timer not cleared");
                     assertEqual(null, _charger._convTimeout, "Conversion timeout timer not cleared");
                     
                     _cleari2cBuffers();
@@ -503,7 +503,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
 
         return Promise(function(resolve, reject) {
-            _charger.getBatteryVoltage(function(err, actual) {
+            _charger.getBattV(function(err, actual) {
                 local expected = 2.304 + 0.140;
                 assertEqual(expected, actual, "Get battery voltage did not match expected results");
             
@@ -523,7 +523,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
 
         return Promise(function(resolve, reject) {
-            _charger.getBatteryVoltage(function(err, actual) {
+            _charger.getBattV(function(err, actual) {
                 local expectedErr = "[ERROR]: BQ25895 ADC conversion timed out";
                 local expected = null;
                 assertEqual(expectedErr, err, "Get battery voltage timeout did not match expected error");
@@ -549,7 +549,7 @@ class StubbedHardwareTests extends ImpTestCase {
                 // Update REG02 to 0x00, to see polling catch change
                 _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
             }.bindenv(this))
-            _charger.getBatteryVoltage(function(err, actual) {
+            _charger.getBattV(function(err, actual) {
                 local expectedErr = null;
                 local expected = 2.304 + 0.140;
                 assertEqual(expectedErr, err, "Get battery voltage delay did not match expected error");
@@ -571,7 +571,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG11.tochar(), "\x7F");
 
         return Promise(function(resolve, reject) {
-            _charger.getVBUSVoltage(function(err, actual) {
+            _charger.getVBUSV(function(err, actual) {
                 local expected = 15.3;
                 assertEqual(expected, actual, "Get VBUS voltage did not match expected results");
             
@@ -591,7 +591,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0F.tochar(), "\x07");
 
         return Promise(function(resolve, reject) {
-            _charger.getSystemVoltage(function(err, actual) {
+            _charger.getSysV(function(err, actual) {
                 local expected = 2.304 + 0.140;
                 assertEqual(expected, actual, "Get system voltage did not match expected results");
             
@@ -631,7 +631,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG12.tochar(), "\x7F");
 
         return Promise(function(resolve, reject) {
-            _charger.getChargingCurrent(function(err, actual) {
+            _charger.getChrgCurr(function(err, actual) {
                 local expected = 6350;
                 assertEqual(expected, actual, "Get charging current did not match expected results");
             
@@ -649,7 +649,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0B.tochar(), "\xF7");
 
         local expected = BQ25895_CHARGING_STATUS.FAST_CHARGING;
-        local actual = _charger.getChargingStatus();
+        local actual = _charger.getChrgStatus();
         assertEqual(expected, actual, "Get charging status did not match expected results");
 
         _cleari2cBuffers();
@@ -668,7 +668,7 @@ class StubbedHardwareTests extends ImpTestCase {
         local expectedChrgFault  = BQ25895_CHARGING_FAULT.CHARGE_SAFETY_TIMER_EXPIRATION;
         local expectedBattFault  = true;
         local expectedNtcFault   = BQ25895_NTC_FAULT.TS_HOT;
-        local actual = _charger.getChargerFaults();
+        local actual = _charger.getChrgFaults();
 
         assertTrue("watchdogFault" in actual, "Get charging faults table missing watchdog slot");
         assertTrue("boostFault" in actual, "Get charging faults table missing boost slot");

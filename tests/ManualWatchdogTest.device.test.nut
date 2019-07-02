@@ -32,10 +32,10 @@ const WATCHDOG_TEST_EXP_TIME_SEC = 165;
 // should work for both BQ25895 and BQ25895M.
 class ManualWatchdogTest extends ImpTestCase {
     
-    _i2c     = null;
-    _charger = null;
-    _hb      = null;
-    _wdTimeoutStartTime = null;
+    _i2c       = null;
+    _charger   = null;
+    _hb        = null;
+    _wdTOStart = null;
 
     function setUp() {
         // impC001 breakout board rev5.0 
@@ -52,8 +52,8 @@ class ManualWatchdogTest extends ImpTestCase {
         _hb = imp.wakeup(10, heartbeat.bindenv(this));
     }
 
-    function logPercentWdTestDone() {
-        local testRunTime = time() - _wdTimeoutStartTime;
+    function logPercentWdTestDone()  {
+        local testRunTime = time() - _wdTOStart;
         local percentDone = 100 * testRunTime /  WATCHDOG_TEST_EXP_TIME_SEC;
         info("Watchdog test running. Test " + percentDone + "% done.");
     }
@@ -70,24 +70,24 @@ class ManualWatchdogTest extends ImpTestCase {
         // Maker sure the charger's has default settings
         _charger.reset();
         // Store default charge voltage (before enable)
-        local defaultVoltage = _charger.getChargeVoltage();
+        local defaultVoltage = _charger.getChrgTermV();
         // Enable with non-default settings
         _charger.enable({"voltage" : 3.0});
 
         // Check settings have changed after enable
-        local userSetVoltage = _charger.getChargeVoltage();
+        local userSetVoltage = _charger.getChrgTermV();
         assertTrue(defaultVoltage != userSetVoltage, "User set charge voltage should not match default voltage");
         
         // Wait to ensure watchdog timer has time to expire 
         return Promise(function(resolve, reject) {
-            // Create a hearbeat log, so user sees that test is still running
-            _wdTimeoutStartTime = time();
+            // Create  a hearbeat log, so user sees that test is still running
+            _wdTOStart = time();
             heartbeat();
             // Check settings after watchdog would have reset (default is 40s, max is 160s)
             imp.wakeup(WATCHDOG_TEST_EXP_TIME_SEC, function() {
                 cancelHearbeat();
                 logPercentWdTestDone();
-                local afterTimerVoltage = _charger.getChargeVoltage();
+                local afterTimerVoltage = _charger.getChrgTermV();
                 assertTrue(defaultVoltage != afterTimerVoltage, "User set charge voltage should not match default voltage");
                 assertEqual(userSetVoltage, afterTimerVoltage, "User set charge voltage should be the same after " + WATCHDOG_TEST_EXP_TIME_SEC + "s");
                 return resolve("Watchdog test passed");
