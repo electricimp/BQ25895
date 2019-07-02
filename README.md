@@ -111,22 +111,22 @@ batteryCharger.disable();
 
 ### getChargeVoltage() ###
 
-This method gets the connected battery's current charge voltage.
+This method gets the charge termination voltage for the battery.
 
 #### Return Value ####
 
-Float &mdash; The charge voltage in V.
+Float &mdash; The charge voltage limit in Volts.
 
 #### Example ####
 
 ```squirrel
 local voltage = batteryCharger.getChargeVoltage();
-server.log("Voltage (charge): " + voltage + "V");
+server.log("Charge Termination Voltage: " + voltage + "V");
 ```
 
 ### getBatteryVoltage(*callback*) ###
 
-This method retrieves the battery's voltage based on internal ADC conversion. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
+This method retrieves the battery's voltage limit during charging. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
 #### Parameters ####
 
@@ -147,13 +147,13 @@ batteryCharger.getBatteryVoltage(function(error, voltage) {
         return;
     }
 
-    server.log("Voltage (ADC): " + voltage + "V");
+    server.log("Charge Termination Voltage: " + voltage + "V");
 });
 ```
 
 ### getVBUSVoltage(*callback*) ###
 
-This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage. If the request is successful, the result will be a float: the V<sub>BUS</sub> voltage in Volts, returned via the function passed into the method's *callback* parameter.
+This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage to the BQ25895. If the request is successful, the result will be a float: the V<sub>BUS</sub> voltage in Volts, returned via the function passed into the method's *callback* parameter.
 
 #### Parameters ####
 
@@ -291,7 +291,7 @@ switch(inputStatus.vbusStatus) {
         break;
 }
 
-server.log("VUS status: " + msg);
+server.log("VBUS status: " + msg);
 server.log("Input Current Limit: " + inputStatus.inputCurrentLimit);
 ```
 
@@ -328,7 +328,7 @@ switch(status) {
         // Do something
         break;
     case BQ25895_CHARGING_STATUS.CHARGE_TERMINATION_DONE:
-        server.log("Battery charge termination done");
+        server.log("Battery charging complete");
         // Do something
         break;
 }
@@ -398,10 +398,10 @@ switch(faults.ntcFault) {
         server.log("NTC OK");
         break;
     case BQ25895_NTC_FAULT.TS_COLD:
-        server.log("NTC NOT OK - TS Cold");
+        server.log("NTC NOT OK - Too Cold");
         break;
     case BQ25895_NTC_FAULT.TS_HOT:
-        server.log("NTC NOT OK - TS Hot");
+        server.log("NTC NOT OK - Too Hot");
         break;
 }
 
