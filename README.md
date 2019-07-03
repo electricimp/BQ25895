@@ -242,8 +242,8 @@ Table &mdash; An input status report with the following keys:
 
 | Key| Type | Description |
 | --- | --- | --- |
-| *vbusStatus* | Integer| Possible input states &mdash; see [**V<sub>BUS</sub> Status**](#vsubbussub-status), below, for details |
-| *inputCurrentLimit* | Integer| 100-3250mA |
+| *vbus* | Integer| Possible input states &mdash; see [**V<sub>BUS</sub> Status**](#vsubbussub-status), below, for details |
+| *inCurrLimit* | Integer| 100-3250mA |
 
 #### V<sub>BUS</sub> Status ####
 
@@ -264,7 +264,7 @@ Table &mdash; An input status report with the following keys:
 local inputStatus = batteryCharger.getInputStatus();
 local msg = "";
 
-switch(inputStatus.vbusStatus) {
+switch(inputStatus.vbus) {
     case BQ25895_VBUS_STATUS.NO_INPUT:
         msg = "No Input";
         break;
@@ -292,7 +292,7 @@ switch(inputStatus.vbusStatus) {
 }
 
 server.log("VBUS status: " + msg);
-server.log("Input Current Limit: " + inputStatus.inputCurrentLimit);
+server.log("Input Current Limit: " + inputStatus.currLimit);
 ```
 
 ### getChrgStatus() ###
@@ -344,11 +344,11 @@ Table &mdash; A charger fault report with the following keys:
 
 | Key/Fault | Type | Description |
 | --- | --- | --- |
-| *watchdogFault* | Bool | `true` if watchdog timer has expired, otherwise `false` |
-| *boostFault* | Bool | `true` if V<sub>MBUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
-| *chrgFault* | Integer | A charging fault. See [**Charging Faults**](#charging-faults), below, for possible values |
-| *battFault* | Bool| `true` if V<sub>BAT</sub> > V<sub>BATOVP</sub>, otherwise `false` |
-| *ntcFault* | Integer | An NTC fault. See [**NTC Faults**](#ntc-faults), below, for possible values |
+| *watchdog* | Bool | `true` if watchdog timer has expired, otherwise `false` |
+| *boost* | Bool | `true` if V<sub>MBUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
+| *chrg* | Integer | A charging fault. See [**Charging Faults**](#charging-faults), below, for possible values |
+| *batt* | Bool| `true` if V<sub>BAT</sub> > V<sub>BATOVP</sub>, otherwise `false` |
+| *ntc* | Integer | An NTC fault. See [**NTC Faults**](#ntc-faults), below, for possible values |
 
 #### Charging Faults ####
 
@@ -374,11 +374,11 @@ local faults = batteryCharger.getChrgFaults();
 
 server.log("Fault Report");
 server.log("--------------------------------------");
-if (faults.watchdogFault) server.log("Watchdog Timer Fault reported");
-if (faults.boostFault) server.log("Boost Fault reported");
-if (faults.battFault) server.log("VBAT too high");
+if (faults.watchdog) server.log("Watchdog Timer Fault reported");
+if (faults.boost) server.log("Boost Fault reported");
+if (faults.batt) server.log("VBAT too high");
 
-switch(faults.chrgFault) {
+switch(faults.chrg) {
     case BQ25895_CHARGING_FAULT.NORMAL:
         server.log("Charging OK");
         break;
@@ -393,7 +393,7 @@ switch(faults.chrgFault) {
         break;
 }
 
-switch(faults.ntcFault) {
+switch(faults.ntc) {
     case BQ25895_NTC_FAULT.NORMAL:
         server.log("NTC OK");
         break;

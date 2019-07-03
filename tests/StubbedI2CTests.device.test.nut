@@ -613,9 +613,9 @@ class StubbedHardwareTests extends ImpTestCase {
         local expectedVBus   = BQ25895_VBUS_STATUS.USB_CDP;
         local expectedInCurr = 3250;
         local actual = _charger.getInputStatus();
-        assertTrue(("vbusStatus" in actual && "inputCurrentLimit" in actual) "Get input status did return expected table slots");
-        assertEqual(expectedVBus, actual.vbusStatus, "Get input status VBUS status did not match expected results");
-        assertEqual(expectedInCurr, actual.inputCurrentLimit, "Get input status input current limit did not match expected results");
+        assertTrue(("vbus" in actual && "currLimit" in actual) "Get input status did return expected table slots");
+        assertEqual(expectedVBus, actual.vbus, "Get input status VBUS status did not match expected results");
+        assertEqual(expectedInCurr, actual.currLimit, "Get input status input current limit did not match expected results");
 
         _cleari2cBuffers();
         return "Get input status test passed";
@@ -670,16 +670,16 @@ class StubbedHardwareTests extends ImpTestCase {
         local expectedNtcFault   = BQ25895_NTC_FAULT.TS_HOT;
         local actual = _charger.getChrgFaults();
 
-        assertTrue("watchdogFault" in actual, "Get charging faults table missing watchdog slot");
-        assertTrue("boostFault" in actual, "Get charging faults table missing boost slot");
-        assertTrue("chrgFault" in actual, "Get charging faults table missing charge slot");
-        assertTrue("battFault" in actual, "Get charging faults table missing battery slot");
-        assertTrue("ntcFault" in actual, "Get charging faults table missing NTC slot");
-        assertEqual(expectedWatchdog, actual.watchdogFault, "Get charging faults watchdog did not match expected results");
-        assertEqual(expectedBoostFault, actual.boostFault, "Get charging faults boost did not match expected results");
-        assertEqual(expectedChrgFault, actual.chrgFault, "Get charging faults charge did not match expected results");
-        assertEqual(expectedBattFault, actual.battFault, "Get charging faults battery did not match expected results");
-        assertEqual(expectedNtcFault, actual.ntcFault, "Get charging faults NTC did not match expected results");
+        assertTrue("watchdog" in actual, "Get charging faults table missing watchdog slot");
+        assertTrue("boost" in actual, "Get charging faults table missing boost slot");
+        assertTrue("chrg" in actual, "Get charging faults table missing charge slot");
+        assertTrue("batt" in actual, "Get charging faults table missing battery slot");
+        assertTrue("ntc" in actual, "Get charging faults table missing NTC slot");
+        assertEqual(expectedWatchdog, actual.watchdog, "Get charging faults watchdog did not match expected results");
+        assertEqual(expectedBoostFault, actual.boost, "Get charging faults boost did not match expected results");
+        assertEqual(expectedChrgFault, actual.chrg, "Get charging faults charge did not match expected results");
+        assertEqual(expectedBattFault, actual.batt, "Get charging faults battery did not match expected results");
+        assertEqual(expectedNtcFault, actual.ntc, "Get charging faults NTC did not match expected results");
 
         _cleari2cBuffers();
         return "Get charging faults test passed";

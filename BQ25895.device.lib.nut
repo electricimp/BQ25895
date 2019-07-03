@@ -190,8 +190,8 @@ class BQ25895 {
         incurr_rd = ((incurr_rd & 0x3f) * 50) + 100;
         
         return {
-            "vbusStatus"        : vbus_rd & 0xE0, 
-            "inputCurrentLimit" : incurr_rd
+            "vbus"      : vbus_rd & 0xE0, 
+            "currLimit" : incurr_rd
         };
     }
 
@@ -206,11 +206,11 @@ class BQ25895 {
         // Read faults register
         local rd = _getReg(BQ25895_REG0C);
         return {
-            "watchdogFault" : (rd & 0x80) == 0x80, 
-            "boostFault"    : (rd & 0x40) == 0x40, 
-            "chrgFault"     : rd & 0x30,            // Normal, input fault, thermal shutdown, charge safety timer expiration
-            "battFault"     : (rd & 0x08) == 0x08, 
-            "ntcFault"      : rd & 0x03             // Normal, TS cold, TS hot, For compatibility between BQ25895 & BQ25895M drop the top bit, it is not needed to determine NTC fault
+            "watchdog" : (rd & 0x80) == 0x80, 
+            "boost"    : (rd & 0x40) == 0x40, 
+            "chrg"     : rd & 0x30,            // Normal, input fault, thermal shutdown, charge safety timer expiration
+            "batt"     : (rd & 0x08) == 0x08, 
+            "ntc"      : rd & 0x03             // Normal, TS cold, TS hot, For compatibility between BQ25895 & BQ25895M drop the top bit, it is not needed to determine NTC fault
         };
     }
 
