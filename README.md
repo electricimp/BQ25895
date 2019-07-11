@@ -2,9 +2,9 @@
 
 The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlink/bq25895.pdf) and the [BQ25895M](http://www.ti.com/lit/ds/symlink/bq25895m.pdf) switch-mode battery charge and system power path management devices for single-cell Li-Ion and Li-polymer batteries. Theses ICs support high input voltage fast charging and communicates over an I&sup2;C interface. The BQ25895 and the BQ25895M have different default settings &mdash; please see the [*enable()*](#enablesettings) method for details of the default charge settings.
 
-**Note 1** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./Examples/README.md) directory to determine the correct settings for your battery.
+**Note 1** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./examples/README.md) directory to determine the correct settings for your battery.
 
-**Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates a **breaking change** which you will need to accommodate. Please see the [*enable()*](#enablesettings) method description for details.
+**Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates **breaking changes** which you will need to accommodate. 
 
 **To include this library in your project, add** `#require "BQ25895.device.lib.nut:3.0.0"` **at the top of your device code.**
 
@@ -12,7 +12,7 @@ The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlin
 
 ### Callbacks ###
 
-An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods take a callback function as a mandatory argument. These callback functions have two parameters of their own: *error* and *result*. The *error* parameter will receive `null` as an argument if no error was encountered, or a string containing an error message. The *result* parameter’s argument will be will the result of the value requested and be either an integer or float, depending on the method in question.
+An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods take a callback function as a mandatory argument. These callback functions have two parameters of their own: *error* and *result*. The *error* parameter will receive `null` as an argument if no error was encountered, or a string containing an error message. The *result* parameter’s argument will be will the result of the value requested and be either an integer or float, depending on the method in question, or `null` if an error encountered.
 
 ### Constructor: BQ25895(*i2cBus [,i2cAddress]*) ###
 
@@ -44,7 +44,7 @@ batteryCharger <- BQ25895(i2c);
 
 This method configures and enables the battery charger with settings to perform a charging cycle when a battery is connected and an input source is available. It is recommended that this method is called immediately after the constructor and on cold boots with the settings for your battery.
 
-For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA, which you apply by adding the key *BQ25895MDefaults* and the value `true` in a table of settings passed into the method. Please ensure you confirm that these defaults are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA, which you apply by adding the key *BQ25895MDefaults* and the value `true` to the table of settings passed into the method. Please ensure you confirm that these defaults are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./examples/README.md) for guidance.
 
 **IMPORTANT** The default settings applied by the library have been changed from those set by this library’s predecessor, the BQ25895M library. You must consider this a breaking change when upgrading to the new library, and ensure your code calls *enable()* with the correct settings &mdash; see the examples below.
 
@@ -59,7 +59,7 @@ For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defau
 | Key | Type | Description |
 | --- | --- | --- |
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
-| *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *voltage* | Float | The desired charge termination voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
 | *current* | Integer | The desired fast-charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
 | *forceICO* | Boolean | Whether to force start the input current optimizer. Default: `false` |
 | *chrgTermLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
@@ -243,7 +243,7 @@ Table &mdash; An input status report with the following keys:
 | Key| Type | Description |
 | --- | --- | --- |
 | *vbus* | Integer| Possible input states &mdash; see [**V<sub>BUS</sub> Status**](#vsubbussub-status), below, for details |
-| *inCurrLimit* | Integer| 100-3250mA |
+| *currLimit* | Integer| 100-3250mA |
 
 #### V<sub>BUS</sub> Status ####
 
@@ -345,7 +345,7 @@ Table &mdash; A charger fault report with the following keys:
 | Key/Fault | Type | Description |
 | --- | --- | --- |
 | *watchdog* | Bool | `true` if watchdog timer has expired, otherwise `false` |
-| *boost* | Bool | `true` if V<sub>MBUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
+| *boost* | Bool | `true` if V<sub>BUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
 | *chrg* | Integer | A charging fault. See [**Charging Faults**](#charging-faults), below, for possible values |
 | *batt* | Bool| `true` if V<sub>BAT</sub> > V<sub>BATOVP</sub>, otherwise `false` |
 | *ntc* | Integer | An NTC fault. See [**NTC Faults**](#ntc-faults), below, for possible values |
@@ -412,7 +412,7 @@ server.log("--------------------------------------");
 
 This method provides a software reset which clears all of the BQ25895's register settings.
 
-**Note** This will reset the charge voltage and current to the register defaults. For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA. Please ensure that you confirm these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+**Note** This will reset the charge voltage and current to the register defaults, 4.208V and 2048mA. These are not the defaults for the BQ25895M. Please ensure that you confirm these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./examples/README.md) for guidance.
 
 If the defaults are not appropriate for your battery, make sure you call [*enable()*](#enablesettings) with the correct settings **immediately** after calling *reset()*.
 

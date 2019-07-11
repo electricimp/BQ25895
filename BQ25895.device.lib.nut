@@ -22,7 +22,7 @@
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-//Registers Addresses
+// Registers Addresses
 const BQ25895_REG00 = 0x00;
 const BQ25895_REG01 = 0x01;
 const BQ25895_REG02 = 0x02;
@@ -45,6 +45,13 @@ const BQ25895_REG12 = 0x12;
 const BQ25895_REG13 = 0x13;
 const BQ25895_REG14 = 0x14;
 
+// ADC Conversion timings
+// NOTE: ADC conversion time nominal 8ms, max 1s, imp.wakeup min is ~0.01
+const BQ25895_CONV_CHECK_SEC   = 0.01;  
+const BQ25895_CONV_TIMEOUT_SEC = 1;    
+
+const BQ25895_DEFAULT_I2C_ADDR = 0xD4;
+
 // For vbusStatus in getInputStatus() output
 enum BQ25895_VBUS_STATUS {
     NO_INPUT             = 0x00, 
@@ -57,7 +64,7 @@ enum BQ25895_VBUS_STATUS {
     OTG                  = 0xE0  
 }
 
-// For getChargeStatus() output
+// For getChrgStatus() output
 enum BQ25895_CHARGING_STATUS {
     NOT_CHARGING            = 0x00, 
     PRE_CHARGE              = 0x08, 
@@ -65,7 +72,7 @@ enum BQ25895_CHARGING_STATUS {
     CHARGE_TERMINATION_DONE = 0x18  
 }
 
-// For CHGR_FAULT in getChargingFaults() output
+// For CHGR_FAULT in getChrgFaults() output
 enum BQ25895_CHARGING_FAULT {
     NORMAL                         = 0x00,
     INPUT_FAULT                    = 0x10,
@@ -73,7 +80,7 @@ enum BQ25895_CHARGING_FAULT {
     CHARGE_SAFETY_TIMER_EXPIRATION = 0x30
 }
 
-// For NTC_FAULT in getChargingFaults() output
+// For NTC_FAULT in getChrgFaults() output
 enum BQ25895_NTC_FAULT {
     NORMAL,  // 0
     TS_COLD, // 1
@@ -110,7 +117,7 @@ class BQ25895 {
     _convTmr     = null;
     _convTimeout = null;
 
-    constructor(i2c, addr = 0xD4) {
+    constructor(i2c, addr = BQ25895_DEFAULT_I2C_ADDR) {
         _i2c = i2c;
         _addr = addr;
         _convStarted = false;
@@ -267,117 +274,8 @@ class BQ25895 {
         _setRegBit(BQ25895_REG14, 7, 0);
     }
 
-    //-------------------- PRIVATE METHODS --------------------//
-
-    function _convStart() {
-        // Only one conversion start is needed
-        if (_convStarted) return;
-
-        // Toggle conversion flag so only one conversion is triggered at a time
-        _convStarted = true;
-        // Make sure only one set of polling timer exists
-        _cancelConvTmr();
-        _cancelConvTimeout();
-
-        // NOTE: ADC conversion time nominal 8ms, max 1s, imp.wakeup min is ~0.01
-        // Set CONV_START bit
-        try {
-            _setRegBit(BQ25895_REG02, 7, 1);
-        } catch(e) {
-            _triggerConvDoneFlow(e);
-            return;
-        }
-        
-        // Poll register to see when ADC conversion completes
-        _convTmr = imp.wakeup(0.01, _checkConvStart.bindenv(this));
-
-        // Don't poll forever, set a timeout 
-        _startConvTimeout();
-    }
-
-    function _checkConvStart() {
-        try {
-            // Check BQ25895_REG02 CONV_START bit
-            local rd = _getReg(BQ25895_REG02);
-
-            if (rd & 0x80) {
-                // ADC conversion is not complete yet
-                // Make sure only one polling timer exists
-                _cancelConvTmr();
-                // Schedule next ADC conversion check
-                _convTmr = imp.wakeup(0.01, _checkConvStart.bindenv(this));
-            } else {
-                // ADC conversion is complete 
-                // Trigger callbacks with no error
-                _triggerConvDoneFlow(null);
-            }
-        } catch(e) {
-            // Trigger callbacks with error
-            _triggerConvDoneFlow(e);
-            return;
-        }
-    }
-
-    function _triggerConvDoneFlow(err) {
-        // Cancel polling timer
-        _cancelConvTmr();
-        // Cancel timeout timer
-        _cancelConvTimeout();
-
-        // Trigger callbacks 
-        foreach (cb in _convCbs) {
-            cb(err);
-        }
-
-        // Reset conversion flag and callbacks
-        _convStarted = false;
-        _convCbs = [];
-    }
-
-    function _convCbFactory(reg, mask, offset, resolution, convert, cb) {
-        return function(err) {
-            if (err) {
-                // Pass error to callback
-                cb(err, null);
-                return;
-            }
-
-            try {
-                // Get register value
-                local rd = _getReg(reg);
-                // Calculate value using Register mask, Offset, Resolution
-                local result = ((rd & mask) * resolution) + offset;
-                // Convert mV to Volts if needed
-                if (convert) result /= 1000.0;
-
-                // Pass results to callback
-                cb(null, result);
-            } catch(e) {
-                cb(e, null);
-            }  
-        }.bindenv(this);
-    }
-
-    function _startConvTimeout() {
-        _convTimeout = imp.wakeup(1, function() {
-            // Trigger callbacks with error 
-            _triggerConvDoneFlow("[ERROR]: BQ25895 ADC conversion timed out");
-        }.bindenv(this));
-    }
-
-    function _cancelConvTmr() {
-        if (_convTmr != null) {
-            imp.cancelwakeup(_convTmr);
-            _convTmr = null;
-        }
-    }
-
-    function _cancelConvTimeout() {
-        if (_convTimeout != null) {
-            imp.cancelwakeup(_convTimeout);
-            _convTimeout = null;
-        }
-    }
+    // PRIVATE METHODS
+    // --------------------------------------------------------
 
     // Set target battery voltage
     function _setChrgV(vreg) {
@@ -438,6 +336,122 @@ class BQ25895 {
         if (val > max) return max;
         return val;
     }
+
+    // ADC CONVERSION HELPERS
+    // --------------------------------------------------------
+
+    function _convStart() {
+        // Only one conversion start is needed
+        if (_convStarted) return;
+
+        // Toggle conversion flag so only one conversion is triggered at a time
+        _convStarted = true;
+        // Make sure only one set of polling timer exists
+        _cancelConvTmr();
+        _cancelConvTimeout();
+
+        // NOTE: ADC conversion time nominal 8ms, max 1s, imp.wakeup min is ~0.01
+        // Set CONV_START bit
+        try {
+            _setRegBit(BQ25895_REG02, 7, 1);
+        } catch(e) {
+            _triggerConvDoneFlow(e);
+            return;
+        }
+        
+        // Poll register to see when ADC conversion completes
+        _convTmr = imp.wakeup(BQ25895_CONV_CHECK_SEC, _checkConvStart.bindenv(this));
+
+        // Don't poll forever, set a timeout 
+        _startConvTimeout();
+    }
+
+    function _checkConvStart() {
+        try {
+            // Check BQ25895_REG02 CONV_START bit
+            local rd = _getReg(BQ25895_REG02);
+
+            if (rd & 0x80) {
+                // ADC conversion is not complete yet
+                // Make sure only one polling timer exists
+                _cancelConvTmr();
+                // Schedule next ADC conversion check
+                _convTmr = imp.wakeup(BQ25895_CONV_CHECK_SEC, _checkConvStart.bindenv(this));
+            } else {
+                // ADC conversion is complete 
+                // Trigger callbacks with no error
+                _triggerConvDoneFlow(null);
+            }
+        } catch(e) {
+            // Trigger callbacks with error
+            _triggerConvDoneFlow(e);
+            return;
+        }
+    }
+
+    function _triggerConvDoneFlow(err) {
+        // Cancel polling timer
+        _cancelConvTmr();
+        // Cancel timeout timer
+        _cancelConvTimeout();
+
+        // Trigger callbacks 
+        foreach (cb in _convCbs) {
+            cb(err);
+        }
+
+        // Reset conversion flag and callbacks
+        _convStarted = false;
+        _convCbs = [];
+    }
+
+    function _convCbFactory(reg, mask, offset, resolution, convert, cb) {
+        return function(err) {
+            if (err) {
+                // Pass error to callback
+                cb(err, null);
+                return;
+            }
+
+            try {
+                // Get register value
+                local rd = _getReg(reg);
+                // Calculate value using Register mask, Offset, Resolution
+                local result = ((rd & mask) * resolution) + offset;
+                // Convert mV to Volts if needed
+                if (convert) result /= 1000.0;
+
+                // Pass results to callback
+                cb(null, result);
+            } catch(e) {
+                cb(e, null);
+            }  
+        }.bindenv(this);
+    }
+
+    function _startConvTimeout() {
+        _convTimeout = imp.wakeup(BQ25895_CONV_TIMEOUT_SEC, function() {
+            // Trigger callbacks with error 
+            _triggerConvDoneFlow("[ERROR]: BQ25895 ADC conversion timed out");
+        }.bindenv(this));
+    }
+
+    function _cancelConvTmr() {
+        if (_convTmr != null) {
+            imp.cancelwakeup(_convTmr);
+            _convTmr = null;
+        }
+    }
+
+    function _cancelConvTimeout() {
+        if (_convTimeout != null) {
+            imp.cancelwakeup(_convTimeout);
+            _convTimeout = null;
+        }
+    }
+
+    // REGISTER GETTER/SETTERS
+    // --------------------------------------------------------
 
     function _getReg(reg) {
         local result = _i2c.read(_addr, reg.tochar(), 1);

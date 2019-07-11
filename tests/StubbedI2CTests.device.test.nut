@@ -24,8 +24,6 @@
 
 @include __PATH__+ "/StubbedI2C.device.nut"
 
-const BQ25895_DEFAULT_I2C_ADDR = 0xD4;
-
 class StubbedHardwareTests extends ImpTestCase {
     
     _i2c    = null;
