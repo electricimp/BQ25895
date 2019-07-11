@@ -24,8 +24,6 @@
 
 @include __PATH__+ "/StubbedI2C.device.nut"
 
-const BQ25895_DEFAULT_I2C_ADDR = 0xD4;
-
 class StubbedHardwareTests extends ImpTestCase {
     
     _i2c    = null;
@@ -51,8 +49,8 @@ class StubbedHardwareTests extends ImpTestCase {
 
     function testConstructorOptionalParams() {
         local customAddr = 0xBA;
-        local _charger = BQ25895(_i2c, customAddr);
-        assertEqual(customAddr, _charger._addr, "Non default i2c address did not match expected");
+        local charger = BQ25895(_i2c, customAddr);
+        assertEqual(customAddr, charger._addr, "Non default i2c address did not match expected");
         return "Constructor optional params test complete.";
     }
 
@@ -77,15 +75,14 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5E) Set charge voltage, 4.208
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 0) Set charge current optimizer to default 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
             BQ25895_REG02, "\x3D", 
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5E",
@@ -125,16 +122,15 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Write commands in enable:
             // (REG02 0x31) Disable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x82) Set charge voltage, 4.352
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 0) Set charge current optimizer to default 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
             BQ25895_REG02, "\x31",            
             BQ25895_REG07, "\x8D",
-            BQ25895_REG07, "\xAD", // Note this val is not effected by previous write!!!
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x82",
             BQ25895_REG04, "\x20",
@@ -173,15 +169,14 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5A) Set charge voltage, 4.2 
             // (REG04 0x9F) Set charge current, 2000
             // (REG09 bit7 to 0) Set charge current optimizer to default 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
             BQ25895_REG02, "\x3D",          
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5A", 
@@ -220,15 +215,14 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0xC2) Set charge voltage, 5.0 
             // (REG04 0xCF) Set charge current, 6000
             // (REG09 bit7 to 0) Set charge current optimizer to default 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s",    
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s",    
             BQ25895_REG02, "\x3D",       
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\xC2", 
@@ -260,15 +254,14 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x02) Set charge voltage, 3.0 
             // (REG04 0x00) Set charge current, -1
             // (REG09 bit7 to 0) Set charge current optimizer to default 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
             BQ25895_REG02, "\x3D",            
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x02", 
@@ -301,20 +294,19 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Test setChargeCurrentOptimizer
         _charger.enable({
-            "setChargeCurrentOptimizer" : true
+            "forceICO" : true
         });
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5E) Set charge voltage, 4.208
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 1) Set charge current optimizer to 1
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
             BQ25895_REG02, "\x3D",  
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5E",
@@ -347,21 +339,20 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Test setChargeCurrentOptimizer in range
         _charger.enable({
-            "setChargeCurrentOptimizer" : false, 
-            "setChargeTerminationCurrentLimit" : 500
+            "forceICO" : false, 
+            "chrgTermLimit" : 500
         });
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5E) Set charge voltage, 4.208
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 0) Set charge current optimizer to 0
             // (REG05 0x13) Set charge termination current limit to default, 256
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s",
             BQ25895_REG02, "\x3D",   
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5E",
@@ -375,20 +366,19 @@ class StubbedHardwareTests extends ImpTestCase {
         // Test setChargeCurrentOptimizer too low
         _i2c._clearWriteBuffer();
         _charger.enable({
-            "setChargeTerminationCurrentLimit" : 10
+            "chrgTermLimit" : 10
         });
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5E) Set charge voltage, 4.208
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 0) Set charge current optimizer to 0
             // (REG05 0x10) Set charge termination current limit to 64
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c", 
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c", 
             BQ25895_REG02, "\x3D",
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5E",
@@ -401,20 +391,19 @@ class StubbedHardwareTests extends ImpTestCase {
         // Test setChargeCurrentOptimizer too high
         _i2c._clearWriteBuffer();
         _charger.enable({
-            "setChargeTerminationCurrentLimit" : 2000
+            "chrgTermLimit" : 2000
         });
 
         // Write commands in enable:
             // (REG02 0x3D) Enable HVDCP_EN & MAXC_EN handshakes
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x3A) Enable charger and min system voltage 
             // (REG06 0x5E) Set charge voltage, 4.208
             // (REG04 0x20) Set charge current, 2048
             // (REG09 bit7 to 0) Set charge current optimizer to 0
             // (REG05 0x1F) Set charge termination current limit to 1024
-        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
+        local expected = format("%c%s%c%s%c%s%c%s%c%s%c%s%c%s", 
             BQ25895_REG02, "\x3D",
-            BQ25895_REG07, "\x9D",
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x3A",
             BQ25895_REG06, "\x5E",
@@ -444,10 +433,9 @@ class StubbedHardwareTests extends ImpTestCase {
 
         // Test REG03 bit toggles as expected
         // Write commands in enable:
-            // (REG07 bit5 to 0, REG07 bit4 to 0) Disable watchdog 
+            // (REG07 bits 4-5 to 00) Disable watchdog 
             // (REG03 0x2A) Disable charging (bit 4 set to 0)  
-        local expected = format("%c%s%c%s%c%s", 
-            BQ25895_REG07, "\x9D",
+        local expected = format("%c%s%c%s", 
             BQ25895_REG07, "\x8D",
             BQ25895_REG03, "\x2A"
         );
@@ -466,62 +454,149 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG06.tochar(), "\x82");
 
         local expected = 4.352;
-        local actual = _charger.getChargeVoltage();
+        local actual = _charger.getChrgTermV();
         assertEqual(expected, actual, "Get charge voltage did not match expected results");
         
         _cleari2cBuffers();
         return "Get charge voltage test passed";
     }
 
+    function testAsyncGetI2CError() {
+        // Test that callback contains i2c error 
+        _cleari2cBuffers();
+        // Set readbuffer values
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
+        // // REG0E to 0x00
+        // _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
+
+        return Promise(function(resolve, reject) {
+            _charger.getBattV(function(err, actual) {
+
+                assertTrue(err != null, "Async getter did not return expected error");
+                local idx = err.find("[ERROR]: I2C read error");
+                assertTrue(idx != null, "Expected error not found");
+                
+                // Make sure all conversion varaibles have cleared
+                imp.wakeup(0, function() {
+                    assertEqual(0, _charger._convCbs.len(), "Conversion callbacks not cleared");
+                    assertTrue(!_charger._convStarted, "Conversion flag not cleared");
+                    assertEqual(null, _charger._convTmr, "Conversion timer not cleared");
+                    assertEqual(null, _charger._convTimeout, "Conversion timeout timer not cleared");
+                    
+                    _cleari2cBuffers();
+                    return resolve("Async getter with i2c error test passed");
+                }.bindenv(this))
+            }.bindenv(this));
+        }.bindenv(this));
+    }
+
     function testGetBatteryVoltage() {
         // Test that REG0E  set to known val, getBatteryVoltage returns expected value
         _cleari2cBuffers();
         // Set readbuffer values
-        // REG02 to 0x00 (need somthing in REG02 for _convStart())
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
         // REG0E to 0x00
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
 
-        local expected = 2.304 + 0.140;
-        local actual = _charger.getBatteryVoltage();
-        assertEqual(expected, actual, "Get battery voltage did not match expected results");
-        
+        return Promise(function(resolve, reject) {
+            _charger.getBattV(function(err, actual) {
+                local expected = 2.304 + 0.140;
+                assertEqual(expected, actual, "Get battery voltage did not match expected results");
+            
+                _cleari2cBuffers();
+                return resolve("Get battery voltage test passed");
+            }.bindenv(this));
+        }.bindenv(this));
+    }
+
+    function testGetBatteryVoltageTimeout() {
+        // Test that REG0E  set to known val, getBatteryVoltage returns expected value
         _cleari2cBuffers();
-        return "Get battery voltage test passed";
+        // Set readbuffer values
+        // REG02 to 0x80 (need bit 7 in REG02 to be 1 for converstion flow to fail)
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x80");
+        // REG0E to 0x00
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
+
+        return Promise(function(resolve, reject) {
+            _charger.getBattV(function(err, actual) {
+                local expectedErr = "[ERROR]: BQ25895 ADC conversion timed out";
+                local expected = null;
+                assertEqual(expectedErr, err, "Get battery voltage timeout did not match expected error");
+                assertEqual(expected, actual, "Get battery voltage timeout did not match expected results");
+                
+                _cleari2cBuffers();
+                return resolve("Get battery voltage timeout test passed");
+            }.bindenv(this));
+        }.bindenv(this));
+    }
+
+    function testGetBatteryVoltageDelay() {
+        // Test that REG0E  set to known val, getBatteryVoltage returns expected value
+        _cleari2cBuffers();
+        // Set readbuffer values
+        // REG02 to 0x80 (need bit 7 in REG02 to be 1 for converstion flow to fail)
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x80");
+        // REG0E to 0x00
+        _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0E.tochar(), "\x07");
+
+        return Promise(function(resolve, reject) {
+            imp.wakeup(0.2, function() {
+                // Update REG02 to 0x00, to see polling catch change
+                _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
+            }.bindenv(this))
+            _charger.getBattV(function(err, actual) {
+                local expectedErr = null;
+                local expected = 2.304 + 0.140;
+                assertEqual(expectedErr, err, "Get battery voltage delay did not match expected error");
+                assertEqual(expected, actual, "Get battery voltage delay did not match expected results");
+                
+                _cleari2cBuffers();
+                return resolve("Get battery voltage delay test passed");
+            }.bindenv(this));
+        }.bindenv(this));
     }
 
     function testGetVBUSVoltage() {
         // Test that REG11 set to known val, getBatteryVoltage returns expected value
         _cleari2cBuffers();
         // Set readbuffer values
-        // REG02 to 0x00 (need somthing in REG02 for _convStart())
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
         // REG11 to 0x7F
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG11.tochar(), "\x7F");
 
-        local expected = 15.3;
-        local actual = _charger.getVBUSVoltage();
-        assertEqual(expected, actual, "Get VBUS voltage did not match expected results");
-        
-        _cleari2cBuffers();
-        return "Get VBUS voltage test passed";
+        return Promise(function(resolve, reject) {
+            _charger.getVBUSV(function(err, actual) {
+                local expected = 15.3;
+                assertEqual(expected, actual, "Get VBUS voltage did not match expected results");
+            
+                _cleari2cBuffers();
+                return resolve("Get VBUS voltage test passed");
+            }.bindenv(this));
+        }.bindenv(this));
     }
 
     function testGetSystemVoltage() {
         // Test that REG0F set to known val, getSystemVoltage returns expected value
         _cleari2cBuffers();
         // Set readbuffer values
-        // REG02 to 0x00 (need somthing in REG02 for _convStart())
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
         // REG0F to 0x07
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0F.tochar(), "\x07");
 
-        local expected = 2.304 + 0.140;
-        local actual = _charger.getSystemVoltage();
-        assertEqual(expected, actual, "Get system voltage did not match expected results");
-
-        _cleari2cBuffers();
-        return "Get system voltage test passed";
+        return Promise(function(resolve, reject) {
+            _charger.getSysV(function(err, actual) {
+                local expected = 2.304 + 0.140;
+                assertEqual(expected, actual, "Get system voltage did not match expected results");
+            
+                _cleari2cBuffers();
+                return resolve("Get system voltage test passed");
+            }.bindenv(this));
+        }.bindenv(this));
     }
 
     function testGetInputStatus() {
@@ -536,9 +611,9 @@ class StubbedHardwareTests extends ImpTestCase {
         local expectedVBus   = BQ25895_VBUS_STATUS.USB_CDP;
         local expectedInCurr = 3250;
         local actual = _charger.getInputStatus();
-        assertTrue(("vbusStatus" in actual && "inputCurrentLimit" in actual) "Get input status did return expected table slots");
-        assertEqual(expectedVBus, actual.vbusStatus, "Get input status VBUS status did not match expected results");
-        assertEqual(expectedInCurr, actual.inputCurrentLimit, "Get input status input current limit did not match expected results");
+        assertTrue(("vbus" in actual && "currLimit" in actual) "Get input status did return expected table slots");
+        assertEqual(expectedVBus, actual.vbus, "Get input status VBUS status did not match expected results");
+        assertEqual(expectedInCurr, actual.currLimit, "Get input status input current limit did not match expected results");
 
         _cleari2cBuffers();
         return "Get input status test passed";
@@ -548,17 +623,20 @@ class StubbedHardwareTests extends ImpTestCase {
         // Test that REG12 set to known val, getChargingCurrent returns expected value
         _cleari2cBuffers();
         // Set readbuffer values
-        // REG02 to 0x00 (need somthing in REG02 for _convStart())
+        // REG02 to 0x00 (need bit 7 in REG02 to be 0 for converstion flow to pass)
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG02.tochar(), "\x00");
         // REG12 to 0x7F
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG12.tochar(), "\x7F");
 
-        local expected = 6350;
-        local actual = _charger.getChargingCurrent();
-        assertEqual(expected, actual, "Get charging current did not match expected results");
-
-        _cleari2cBuffers();
-        return "Get charging current test passed";
+        return Promise(function(resolve, reject) {
+            _charger.getChrgCurr(function(err, actual) {
+                local expected = 6350;
+                assertEqual(expected, actual, "Get charging current did not match expected results");
+            
+                _cleari2cBuffers();
+                return resolve("Get charging current test passed");
+            }.bindenv(this));
+        }.bindenv(this));
     }
 
     function testGetChargingStatus() {
@@ -569,7 +647,7 @@ class StubbedHardwareTests extends ImpTestCase {
         _i2c._setReadResp(BQ25895_DEFAULT_I2C_ADDR, BQ25895_REG0B.tochar(), "\xF7");
 
         local expected = BQ25895_CHARGING_STATUS.FAST_CHARGING;
-        local actual = _charger.getChargingStatus();
+        local actual = _charger.getChrgStatus();
         assertEqual(expected, actual, "Get charging status did not match expected results");
 
         _cleari2cBuffers();
@@ -588,18 +666,18 @@ class StubbedHardwareTests extends ImpTestCase {
         local expectedChrgFault  = BQ25895_CHARGING_FAULT.CHARGE_SAFETY_TIMER_EXPIRATION;
         local expectedBattFault  = true;
         local expectedNtcFault   = BQ25895_NTC_FAULT.TS_HOT;
-        local actual = _charger.getChargerFaults();
+        local actual = _charger.getChrgFaults();
 
-        assertTrue("watchdogFault" in actual, "Get charging faults table missing watchdog slot");
-        assertTrue("boostFault" in actual, "Get charging faults table missing boost slot");
-        assertTrue("chrgFault" in actual, "Get charging faults table missing charge slot");
-        assertTrue("battFault" in actual, "Get charging faults table missing battery slot");
-        assertTrue("ntcFault" in actual, "Get charging faults table missing NTC slot");
-        assertEqual(expectedWatchdog, actual.watchdogFault, "Get charging faults watchdog did not match expected results");
-        assertEqual(expectedBoostFault, actual.boostFault, "Get charging faults boost did not match expected results");
-        assertEqual(expectedChrgFault, actual.chrgFault, "Get charging faults charge did not match expected results");
-        assertEqual(expectedBattFault, actual.battFault, "Get charging faults battery did not match expected results");
-        assertEqual(expectedNtcFault, actual.ntcFault, "Get charging faults NTC did not match expected results");
+        assertTrue("watchdog" in actual, "Get charging faults table missing watchdog slot");
+        assertTrue("boost" in actual, "Get charging faults table missing boost slot");
+        assertTrue("chrg" in actual, "Get charging faults table missing charge slot");
+        assertTrue("batt" in actual, "Get charging faults table missing battery slot");
+        assertTrue("ntc" in actual, "Get charging faults table missing NTC slot");
+        assertEqual(expectedWatchdog, actual.watchdog, "Get charging faults watchdog did not match expected results");
+        assertEqual(expectedBoostFault, actual.boost, "Get charging faults boost did not match expected results");
+        assertEqual(expectedChrgFault, actual.chrg, "Get charging faults charge did not match expected results");
+        assertEqual(expectedBattFault, actual.batt, "Get charging faults battery did not match expected results");
+        assertEqual(expectedNtcFault, actual.ntc, "Get charging faults NTC did not match expected results");
 
         _cleari2cBuffers();
         return "Get charging faults test passed";

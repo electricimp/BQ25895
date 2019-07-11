@@ -1,14 +1,18 @@
-# BQ25895 2.0.0 #
+# BQ25895 3.0.0 #
 
 The library provides a driver for the [BQ25895](https://www.ti.com/lit/ds/symlink/bq25895.pdf) and the [BQ25895M](http://www.ti.com/lit/ds/symlink/bq25895m.pdf) switch-mode battery charge and system power path management devices for single-cell Li-Ion and Li-polymer batteries. Theses ICs support high input voltage fast charging and communicates over an I&sup2;C interface. The BQ25895 and the BQ25895M have different default settings &mdash; please see the [*enable()*](#enablesettings) method for details of the default charge settings.
 
-**Note 1** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./Examples/README.md) directory to determine the correct settings for your battery.
+**Note 1** When using an impC001 breakout board without a battery connected it is recommended that you always enable the battery charger with BQ25895 default settings. If a battery is connected, please follow [the instructions in the Examples](./examples/README.md) directory to determine the correct settings for your battery.
 
-**Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates a **breaking change** which you will need to accommodate. Please see the [*enable()*](#enablesettings) method description for details.
+**Note 2** This library supersedes the BQ25895M library, which is now deprecated and will not be maintained. We strongly recommend that you update to the the new library, but please be aware that this incorporates **breaking changes** which you will need to accommodate. 
 
-**To include this library in your project, add** `#require "BQ25895.device.lib.nut:2.0.0"` **at the top of your device code.**
+**To include this library in your project, add** `#require "BQ25895.device.lib.nut:3.0.0"` **at the top of your device code.**
 
 ## Class Usage ##
+
+### Callbacks ###
+
+An ADC conversion can take up to one full second to return a value, therefore all library methods that require an ADC conversion are asynchronous. These methods take a callback function as a mandatory argument. These callback functions have two parameters of their own: *error* and *result*. The *error* parameter will receive `null` as an argument if no error was encountered, or a string containing an error message. The *result* parameter’s argument will be will the result of the value requested and be either an integer or float, depending on the method in question, or `null` if an error encountered.
 
 ### Constructor: BQ25895(*i2cBus [,i2cAddress]*) ###
 
@@ -24,7 +28,7 @@ The constructor *does not configure the battery charger*. It is recommended that
 #### Example ####
 
 ```squirrel
-#require "BQ25895.device.lib.nut:2.0.0"
+#require "BQ25895.device.lib.nut:3.0.0"
 
 // Alias and configure an impC001 I2C bus
 local i2c = hardware.i2cKL;
@@ -40,7 +44,7 @@ batteryCharger <- BQ25895(i2c);
 
 This method configures and enables the battery charger with settings to perform a charging cycle when a battery is connected and an input source is available. It is recommended that this method is called immediately after the constructor and on cold boots with the settings for your battery.
 
-For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA, which you apply by adding the key *BQ25895MDefaults* and the value `true` in a table of settings passed into the method. Please ensure you confirm that these defaults are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA, which you apply by adding the key *BQ25895MDefaults* and the value `true` to the table of settings passed into the method. Please ensure you confirm that these defaults are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./examples/README.md) for guidance.
 
 **IMPORTANT** The default settings applied by the library have been changed from those set by this library’s predecessor, the BQ25895M library. You must consider this a breaking change when upgrading to the new library, and ensure your code calls *enable()* with the correct settings &mdash; see the examples below.
 
@@ -55,10 +59,10 @@ For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defau
 | Key | Type | Description |
 | --- | --- | --- |
 | *BQ25895MDefaults* | Boolean | Whether to enable the charger with defaults for the BQ25895M part. If `true` the *chargeVoltage* is set to `4.352V` and *currentLimit* to `2048mA`. Default: `false` |
-| *voltage* | Float | The desired charge voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *current* | Integer | The desired fast charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
-| *setChargeCurrentOptimizer* | Boolean | Identify maximum power point without overload the input source. Default: `true` |
-| *setChargeTerminationCurrentLimit* | Integer | Charge cycle is terminated when battery voltage is above recharge threshold and the current is below *termination current*. Range: 64-1024mA. Default: 256mA |
+| *voltage* | Float | The desired charge termination voltage in Volts. Range: 3.84-4.608V. Default: 4.208V.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *current* | Integer | The desired fast-charge current limit in mA. Range: 0-5056mA. Default: 2048mA.<br />**Note** If *BQ25895MDefaults* flag is set to `true`, this value will be ignored |
+| *forceICO* | Boolean | Whether to force start the input current optimizer. Default: `false` |
+| *chrgTermLimit* | Integer | The current at which the charge cycle will be terminated when the battery voltage is above the recharge threshold. Range: 64-1024mA. Default: 256mA |
 
 #### Return Value ####
 
@@ -105,79 +109,127 @@ Nothing.
 batteryCharger.disable();
 ```
 
-### getChargeVoltage() ###
+### getChrgTermV() ###
 
-This method gets the connected battery's current charge voltage.
+This method gets the charge termination voltage for the battery.
 
 #### Return Value ####
 
-Float &mdash; The charge voltage in V.
+Float &mdash; The charge voltage limit in Volts.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getChargeVoltage();
-server.log("Voltage (charge): " + voltage + "V");
+local voltage = batteryCharger.getChrgTermV();
+server.log("Charge Termination Voltage: " + voltage + "V");
 ```
 
-### getBatteryVoltage() ###
+### getBattV(*callback*) ###
 
-This method gets the current battery voltage based on internal ADC conversion.
+This method retrieves the battery's voltage based on an internal ADC conversion. If the request is successful, the result will be a float: the battery voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
-Float &mdash; The battery voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getBatteryVoltage();
-server.log("Voltage (ADC): " + voltage + "V");
+batteryCharger.getBattV(function(error, voltage) {
+    if (error != null) {
+        server.error(error);
+        return;
+    }
+
+    server.log("Battery Voltage (ADC): " + voltage + "V");
+});
 ```
 
-### getVBUSVoltage() ###
+### getVBUSV(*callback*) ###
 
-This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage.
+This method gets the V<sub>BUS</sub> voltage based on ADC conversion. This is the input voltage to the BQ25895. If the request is successful, the result will be a float: the V<sub>BUS</sub> voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
-Float &mdash; The V<sub>BUS</sub> voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getVBUSVoltage();
-server.log("Voltage (VBAT): " + voltage + "V");
+batteryCharger.getVBUSV(function(error, voltage) {
+    if (error != null) {
+        server.error(error);
+        return;
+    }
+
+    server.log("Voltage (VBUS): " + voltage + "V");
+});
 ```
 
-### getSystemVoltage() ###
+### getSysV(*callback*) ###
 
-This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply.
+This method gets the system voltage based on the ADC conversion. This the output voltage which can be used to drive other chips in your application. In most impC001-based applications, the system voltage is the impC001 V<sub>MOD</sub> supply. If the request is successful, the result will be a float: the system voltage in Volts, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
-Float &mdash; The system voltage in V.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local voltage = batteryCharger.getSystemVoltage();
-server.log("Voltage (system): " + voltage + "V");
+batteryCharger.getSysV(function(error, voltage) {
+    if (error != null) {
+        server.error(error);
+        return;
+    }
+
+    server.log("Voltage (system): " + voltage + "V");
+});
 ```
 
-### getChargingCurrent() ###
+### getChrgCurr(*callback*) ###
 
-This method gets the measured current going to the battery.
+This method gets the measured current going to the battery based on the ADC conversion. If the request is successful, the result will be an integer: the charging current in milliAmperes, returned via the function passed into the method's *callback* parameter.
+
+#### Parameters ####
+
+| Parameter | Type | Required? | Description |
+| --- | --- | --- | --- |
+| *callback* | Function | Yes | See [Class Usage: Callbacks](#callbacks) for details |
 
 #### Return Value ####
 
-Integer &mdash; The charging current in mA.
+Nothing.
 
 #### Example ####
 
 ```squirrel
-local current = batteryCharger.getChargingCurrent();
-server.log("Current (charging): " + current + "mA");
+batteryCharger.getChrgCurr(function(error, current) {
+    if (error != null) {
+        server.error(error);
+        return;
+    }
+
+    server.log("Current (charging): " + current + "mA");
+});
 ```
 
 ### getInputStatus() ###
@@ -190,8 +242,8 @@ Table &mdash; An input status report with the following keys:
 
 | Key| Type | Description |
 | --- | --- | --- |
-| *vbusStatus* | Integer| Possible input states &mdash; see [**V<sub>BUS</sub> Status**](#vsubbussub-status), below, for details |
-| *inputCurrentLimit* | Integer| 100-3250mA |
+| *vbus* | Integer| Possible input states &mdash; see [**V<sub>BUS</sub> Status**](#vsubbussub-status), below, for details |
+| *currLimit* | Integer| 100-3250mA |
 
 #### V<sub>BUS</sub> Status ####
 
@@ -210,37 +262,40 @@ Table &mdash; An input status report with the following keys:
 
 ```squirrel
 local inputStatus = batteryCharger.getInputStatus();
-switch(inputStatus.vbusStatus) {
+local msg = "";
+
+switch(inputStatus.vbus) {
     case BQ25895_VBUS_STATUS.NO_INPUT:
-        server.log("No Input");
+        msg = "No Input";
         break;
     case BQ25895_VBUS_STATUS.USB_HOST_SDP:
-        server.log("USB Host SDP");
+        msg = "USB Host SDP";
         break;
     case BQ25895_VBUS_STATUS.USB_CDP:
-        server.log("USB CDP");
+        msg = "USB CDP";
         break;
     case BQ25895_VBUS_STATUS.USB_DCP:
-        server.log("USB DCP");
+        msg = "USB DCP";
         break;
     case BQ25895_VBUS_STATUS.ADJUSTABLE_HV_DCP:
-        server.log("Adjustable High Voltage DCP");
+        msg = "Adjustable High Voltage DCP";
         break;
     case BQ25895_VBUS_STATUS.UNKNOWN_ADAPTER:
-        server.log("Unknown Adapter");
+        msg = "Unknown Adapter";
         break;
     case BQ25895_VBUS_STATUS.NON_STANDARD_ADAPTER:
-        server.log("Non Standard Adapter");
+        msg = "Non-standard Adapter";
         break;
     case BQ25895_VBUS_STATUS.OTG:
-        server.log("OTG");
+        msg = "OTG";
         break;
 }
 
-server.log("Input Current Limit = " + inputStatus.inputCurrentLimit);
+server.log("VBUS status: " + msg);
+server.log("Input Current Limit: " + inputStatus.currLimit);
 ```
 
-### getChargingStatus() ###
+### getChrgStatus() ###
 
 This method reports the battery charging status.
 
@@ -258,7 +313,7 @@ Integer &mdash; A charging status constant:
 #### Example ####
 
 ```squirrel
-local status = charger.getChargingStatus();
+local status = batteryCharger.getChrgStatus();
 switch(status) {
     case BQ25895_CHARGING_STATUS.NOT_CHARGING:
         server.log("Battery is not charging");
@@ -273,13 +328,13 @@ switch(status) {
         // Do something
         break;
     case BQ25895_CHARGING_STATUS.CHARGE_TERMINATION_DONE:
-        server.log("Battery charge termination done");
+        server.log("Battery charging complete");
         // Do something
         break;
 }
 ```
 
-### getChargerFaults() ###
+### getChrgFaults() ###
 
 This method reports possible charger faults.
 
@@ -289,11 +344,11 @@ Table &mdash; A charger fault report with the following keys:
 
 | Key/Fault | Type | Description |
 | --- | --- | --- |
-| *watchdogFault* | Bool | `true` if watchdog timer has expired, otherwise `false` |
-| *boostFault* | Bool | `true` if V<sub>MBUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
-| *chrgFault* | Integer | A charging fault. See [**Charging Faults**](#charging-faults), below, for possible values |
-| *battFault* | Bool| `true` if V<sub>BAT</sub> > V<sub>BATOVP</sub>, otherwise `false` |
-| *ntcFault* | Integer | An NTC fault. See [**NTC Faults**](#ntc-faults), below, for possible values |
+| *watchdog* | Bool | `true` if watchdog timer has expired, otherwise `false` |
+| *boost* | Bool | `true` if V<sub>BUS</sub> overloaded in OTG, V<sub>BUS</sub> OVP, or battery is too low, otherwise `false` |
+| *chrg* | Integer | A charging fault. See [**Charging Faults**](#charging-faults), below, for possible values |
+| *batt* | Bool| `true` if V<sub>BAT</sub> > V<sub>BATOVP</sub>, otherwise `false` |
+| *ntc* | Integer | An NTC fault. See [**NTC Faults**](#ntc-faults), below, for possible values |
 
 #### Charging Faults ####
 
@@ -315,12 +370,15 @@ Table &mdash; A charger fault report with the following keys:
 #### Example ####
 
 ```squirrel
-local faults = batteryCharger.getChargerFaults();
-server.log("Fault Report");
-if (faults.watchdogFault) server.log("Watchdog Timer Fault reported");
-if (faults.boostFault) server.log("Boost Fault reported");
+local faults = batteryCharger.getChrgFaults();
 
-switch(faults.chrgFault) {
+server.log("Fault Report");
+server.log("--------------------------------------");
+if (faults.watchdog) server.log("Watchdog Timer Fault reported");
+if (faults.boost) server.log("Boost Fault reported");
+if (faults.batt) server.log("VBAT too high");
+
+switch(faults.chrg) {
     case BQ25895_CHARGING_FAULT.NORMAL:
         server.log("Charging OK");
         break;
@@ -335,25 +393,26 @@ switch(faults.chrgFault) {
         break;
 }
 
-if (faults.battFault) server.log("VBAT too high");
-
-switch(faults.ntcFault) {
+switch(faults.ntc) {
     case BQ25895_NTC_FAULT.NORMAL:
         server.log("NTC OK");
         break;
     case BQ25895_NTC_FAULT.TS_COLD:
-        server.log("NTC NOT OK - TS Cold");
+        server.log("NTC NOT OK - Too Cold");
         break;
     case BQ25895_NTC_FAULT.TS_HOT:
-        server.log("NTC NOT OK - TS Hot");
+        server.log("NTC NOT OK - Too Hot");
         break;
+}
+
+server.log("--------------------------------------");
 ```
 
 ### reset() ###
 
 This method provides a software reset which clears all of the BQ25895's register settings.
 
-**Note** This will reset the charge voltage and current to the register defaults. For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA. Please ensure that you confirm these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
+**Note** This will reset the charge voltage and current to the register defaults, not the library defaults. For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA. Please ensure that these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
 
 If the defaults are not appropriate for your battery, make sure you call [*enable()*](#enablesettings) with the correct settings **immediately** after calling *reset()*.
 
