@@ -170,7 +170,7 @@ Nothing.
 ```squirrel
 batteryCharger.getVBUSV(function(error, voltage) {
     if (error != null) {
-        server.log(error);
+        server.error(error);
         return;
     }
 
@@ -412,7 +412,7 @@ server.log("--------------------------------------");
 
 This method provides a software reset which clears all of the BQ25895's register settings.
 
-**Note** This will reset the charge voltage and current to the register defaults, 4.208V and 2048mA. These are not the defaults for the BQ25895M. Please ensure that you confirm these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./examples/README.md) for guidance.
+**Note** This will reset the charge voltage and current to the register defaults, not the library defaults. For the BQ25895, the defaults are 4.208V and 2048mA. For the BQ25895M, the defaults are 4.352V and 2048mA. Please ensure that these are suitable for your battery &mdash; see [**Setting Up The BQ25895 Library For Your Battery**](./Examples/README.md) for guidance.
 
 If the defaults are not appropriate for your battery, make sure you call [*enable()*](#enablesettings) with the correct settings **immediately** after calling *reset()*.
 
